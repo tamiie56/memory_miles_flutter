@@ -1,0 +1,42 @@
+name: memory_miles
+description: A travel story journaling app.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # HTTP & API
+  http: ^1.2.0
+  dio: ^5.4.0
+  
+  # State Management
+  provider: ^6.1.2
+  
+  # Storage (for JWT token)
+  shared_preferences: ^2.2.2
+  
+  # Image picking
+  image_picker: ^1.0.7
+  
+  # Date formatting
+  intl: ^0.19.0
+  
+  # UI
+  cached_network_image: ^3.3.1
+  flutter_staggered_grid_view: ^0.7.0
+  fluttertoast: ^8.2.4
+  
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
