@@ -1,6 +1,8 @@
 // lib/providers/story_provider.dart
 
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/travel_story.dart';
 import '../services/api_service.dart';
@@ -26,9 +28,13 @@ class StoryProvider extends ChangeNotifier {
     required List<String> visitedLocation,
     required DateTime visitedDate,
     File? imageFile,
+    Uint8List? imageBytes,
   }) async {
     String imageUrl = '';
-    if (imageFile != null) {
+    if (kIsWeb && imageBytes != null) {
+      final uploaded = await ApiService.uploadImageBytes(imageBytes, 'image.jpg');
+      imageUrl = uploaded ?? '';
+    } else if (imageFile != null) {
       final uploaded = await ApiService.uploadImage(imageFile);
       imageUrl = uploaded ?? '';
     }
@@ -56,9 +62,13 @@ class StoryProvider extends ChangeNotifier {
     required List<String> visitedLocation,
     required DateTime visitedDate,
     File? newImageFile,
+    Uint8List? newImageBytes,
   }) async {
     String imageUrl = currentImageUrl;
-    if (newImageFile != null) {
+    if (kIsWeb && newImageBytes != null) {
+      final uploaded = await ApiService.uploadImageBytes(newImageBytes, 'image.jpg');
+      imageUrl = uploaded ?? currentImageUrl;
+    } else if (newImageFile != null) {
       final uploaded = await ApiService.uploadImage(newImageFile);
       imageUrl = uploaded ?? currentImageUrl;
     }
@@ -95,7 +105,6 @@ class StoryProvider extends ChangeNotifier {
       final idx = _stories.indexWhere((s) => s.id == story.id);
       if (idx != -1) {
         _stories[idx] = story.copyWith(isFavorite: newVal);
-        // Sort: favorites first
         _stories.sort((a, b) => b.isFavorite ? 1 : -1);
         notifyListeners();
       }

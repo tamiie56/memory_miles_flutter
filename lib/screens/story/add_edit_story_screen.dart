@@ -1,6 +1,8 @@
 // lib/screens/story/add_edit_story_screen.dart
 
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -9,7 +11,7 @@ import '../../providers/story_provider.dart';
 import '../../utils/theme.dart';
 
 class AddEditStoryScreen extends StatefulWidget {
-  final TravelStory? story; // null = add mode
+  final TravelStory? story;
 
   const AddEditStoryScreen({super.key, this.story});
 
@@ -25,6 +27,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
   DateTime _visitedDate = DateTime.now();
   List<String> _locations = [];
   File? _imageFile;
+  Uint8List? _imageBytes;
   bool _loading = false;
   String? _error;
 
@@ -53,7 +56,12 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked != null) {
-      setState(() => _imageFile = File(picked.path));
+      if (kIsWeb) {
+        final bytes = await picked.readAsBytes();
+        setState(() => _imageBytes = bytes);
+      } else {
+        setState(() => _imageFile = File(picked.path));
+      }
     }
   }
 
@@ -106,6 +114,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
         visitedLocation: _locations,
         visitedDate: _visitedDate,
         newImageFile: _imageFile,
+        newImageBytes: _imageBytes,
       );
     } else {
       success = await provider.addStory(
@@ -114,6 +123,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
         visitedLocation: _locations,
         visitedDate: _visitedDate,
         imageFile: _imageFile,
+        imageBytes: _imageBytes,
       );
     }
 
@@ -143,15 +153,15 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
             onPressed: _loading ? null : _handleSubmit,
             child: _loading
                 ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
-                  )
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+            )
                 : Text(
-                    isEdit ? 'UPDATE' : 'ADD',
-                    style: const TextStyle(
-                        color: AppTheme.primary, fontWeight: FontWeight.bold),
-                  ),
+              isEdit ? 'UPDATE' : 'ADD',
+              style: const TextStyle(
+                  color: AppTheme.primary, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -172,7 +182,6 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                     style: const TextStyle(color: AppTheme.danger, fontSize: 13)),
               ),
 
-            // Title
             _label('TITLE'),
             const SizedBox(height: 8),
             TextField(
@@ -190,7 +199,6 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
             const Divider(),
             const SizedBox(height: 16),
 
-            // Date picker
             GestureDetector(
               onTap: _pickDate,
               child: Container(
@@ -201,8 +209,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today,
-                        color: AppTheme.primary, size: 18),
+                    const Icon(Icons.calendar_today, color: AppTheme.primary, size: 18),
                     const SizedBox(width: 10),
                     Text(
                       '${_visitedDate.day} ${_monthName(_visitedDate.month)} ${_visitedDate.year}',
@@ -217,7 +224,6 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Image selector
             _label('COVER IMAGE'),
             const SizedBox(height: 8),
             GestureDetector(
@@ -231,18 +237,19 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                   border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
                 ),
                 clipBehavior: Clip.hardEdge,
-                child: _imageFile != null
+                child: _imageBytes != null
+                    ? Image.memory(_imageBytes!, fit: BoxFit.cover)
+                    : _imageFile != null
                     ? Image.file(_imageFile!, fit: BoxFit.cover)
                     : (isEdit && widget.story!.imageUrl.isNotEmpty)
-                        ? Image.network(widget.story!.imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _imagePlaceholder())
-                        : _imagePlaceholder(),
+                    ? Image.network(widget.story!.imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _imagePlaceholder())
+                    : _imagePlaceholder(),
               ),
             ),
             const SizedBox(height: 20),
 
-            // Story
             _label('STORY'),
             const SizedBox(height: 8),
             Container(
@@ -265,7 +272,6 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Visited locations
             _label('VISITED LOCATIONS'),
             const SizedBox(height: 8),
             Row(
@@ -297,14 +303,13 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
               runSpacing: 8,
               children: _locations
                   .map((loc) => Chip(
-                        label: Text(loc),
-                        backgroundColor: AppTheme.primaryLight,
-                        labelStyle: const TextStyle(color: AppTheme.primary),
-                        deleteIcon: const Icon(Icons.close,
-                            size: 16, color: AppTheme.primary),
-                        onDeleted: () =>
-                            setState(() => _locations.remove(loc)),
-                      ))
+                label: Text(loc),
+                backgroundColor: AppTheme.primaryLight,
+                labelStyle: const TextStyle(color: AppTheme.primary),
+                deleteIcon: const Icon(Icons.close,
+                    size: 16, color: AppTheme.primary),
+                onDeleted: () => setState(() => _locations.remove(loc)),
+              ))
                   .toList(),
             ),
             const SizedBox(height: 40),
@@ -315,24 +320,23 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
   }
 
   Widget _label(String text) => Text(
-        text,
-        style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textMid,
-            letterSpacing: 1),
-      );
+    text,
+    style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
+        color: AppTheme.textMid,
+        letterSpacing: 1),
+  );
 
   Widget _imagePlaceholder() => Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.add_photo_alternate_outlined,
-              color: AppTheme.primary, size: 36),
-          SizedBox(height: 8),
-          Text('Tap to add cover image',
-              style: TextStyle(color: AppTheme.primary, fontSize: 13)),
-        ],
-      );
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: const [
+      Icon(Icons.add_photo_alternate_outlined, color: AppTheme.primary, size: 36),
+      SizedBox(height: 8),
+      Text('Tap to add cover image',
+          style: TextStyle(color: AppTheme.primary, fontSize: 13)),
+    ],
+  );
 
   String _monthName(int month) {
     const months = [
