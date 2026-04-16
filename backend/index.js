@@ -4,7 +4,6 @@ import dotenv from "dotenv"
 import cookieParser from "cookie-parser" 
 import path from "path"
 import cors from "cors"
-git rm -r --cached .dart_tool
 import authRoutes from "./routes/auth.route.js"
 import userRoutes from "./routes/user.route.js"
 import travelStoryRoutes from "./routes/travelStory.route.js"

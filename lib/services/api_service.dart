@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/constants.dart';
@@ -67,7 +68,6 @@ class ApiService {
     );
     final data = jsonDecode(response.body);
     if (response.statusCode == 200) {
-      // Extract token from Set-Cookie header
       final setCookie = response.headers['set-cookie'] ?? '';
       final tokenMatch = RegExp(r'access_token=([^;]+)').firstMatch(setCookie);
       if (tokenMatch != null) {
@@ -216,6 +216,25 @@ class ApiService {
       request.headers['Authorization'] = 'Bearer $token';
     }
     request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+    final response = await request.send();
+    final respStr = await response.stream.bytesToString();
+    if (response.statusCode == 201) {
+      final data = jsonDecode(respStr);
+      return data['imageUrl'];
+    }
+    return null;
+  }
+
+  static Future<String?> uploadImageBytes(Uint8List bytes, String filename) async {
+    final token = await getToken();
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('${AppConstants.baseUrl}/travelStory/image-upload'),
+    );
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+    request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: filename));
     final response = await request.send();
     final respStr = await response.stream.bytesToString();
     if (response.statusCode == 201) {
