@@ -5,24 +5,27 @@ import path from "path"
 import fs from "fs"
 
 export const addTravelStory = async (req, res, next) => {
-    const{ title, story, visitedLocation, isFavorite, imageUrl, visitedDate } = req.body
+    const { title, story, visitedLocation, isFavorite, imageUrl, visitedDate } = req.body
 
     const userId = req.user.id
 
-    //validate required fields
-    if(!title || !story || !visitedLocation || !imageUrl || !visitedDate){
+    // validate required fields (imageUrl optional)
+    if (!title || !story || !visitedLocation || !visitedDate) {
         return next(errorHandler(400, "All fields are required"))
     }
-   //convert visited date from milliseconds to date object 
+
+    const placeholderImage = "http://localhost:3000/assets/placeholderImage.avif"
+
+    // convert visited date from milliseconds to date object
     const parsedVisitedDate = new Date(parseInt(visitedDate))
 
-    try{
+    try {
         const travelStory = new TravelStory({
             title,
             story,
             visitedLocation,
             userId,
-            imageUrl,
+            imageUrl: imageUrl || placeholderImage,
             visitedDate: parsedVisitedDate,
         })
         await travelStory.save()
@@ -30,9 +33,7 @@ export const addTravelStory = async (req, res, next) => {
             story: travelStory,
             message: "Travel story added successfully"
         })
-
-
-    } catch(error){
+    } catch (error) {
         next(error)
     }
 }
@@ -40,27 +41,26 @@ export const addTravelStory = async (req, res, next) => {
 export const getAllTravelStory = async (req, res, next) => {
     const userId = req.user.id
 
-    try{
-        const travelStories = await TravelStory.find({userId: userId}).sort({isFavorite: -1,})
-
+    try {
+        const travelStories = await TravelStory.find({ userId: userId }).sort({ isFavorite: -1 })
         res.status(200).json({
             stories: travelStories
         })
-    } catch(error){
+    } catch (error) {
         next(error)
     }
 }
 
 export const imageUpload = async (req, res, next) => {
-    try{
-        if(!req.file){
-            return next (errorHandler(400, "No image uploaded"))
+    try {
+        if (!req.file) {
+            return next(errorHandler(400, "No image uploaded"))
         }
 
         const imageUrl = `http://localhost:3000/uploads/${req.file.filename}`
 
-        res.status(201).json({imageUrl})
-    } catch(error){
+        res.status(201).json({ imageUrl })
+    } catch (error) {
         next(error)
     }
 }
@@ -71,49 +71,38 @@ const __dirname = path.dirname(__filename)
 const rootDir = path.join(__dirname, "..")
 
 export const deleteImage = async (req, res, next) => {
-    const {imageUrl} =req.query
+    const { imageUrl } = req.query
 
-    if(!imageUrl){
+    if (!imageUrl) {
         return next(errorHandler(400, "Image URL is required"))
     }
 
-    try{
-        //extract filename from imageUrl
+    try {
         const filename = path.basename(imageUrl)
+        const filePath = path.join(rootDir, "uploads", filename)
 
-        //delete the file path
-        const filePath = path.join(rootDir,"uploads", filename)
-
-        //console.log(filePath)
-
-        //check if the file exists
-        if (!fs.existsSync(filePath)){
+        if (!fs.existsSync(filePath)) {
             return next(errorHandler(404, "Image not found"))
         }
 
-        //delete the file
         await fs.promises.unlink(filePath)
-
-        res.status(200).json({message: "Image deleted successfully"})
-
-    } catch(error){
+        res.status(200).json({ message: "Image deleted successfully" })
+    } catch (error) {
         next(error)
     }
 }
-
 
 export const editTravelStory = async (req, res, next) => {
     const { id } = req.params
     const { title, story, visitedLocation, imageUrl, visitedDate } = req.body
     const userId = req.user.id
 
-    //validate required fields
     if (!title || !story || !visitedLocation || !visitedDate) {
         return next(errorHandler(400, "All fields are required"))
     }
 
-    //convert visited date from milliseconds to date object
     const parsedVisitedDate = new Date(parseInt(visitedDate))
+
     try {
         const travelStory = await TravelStory.findOne({ _id: id, userId: userId })
 
@@ -121,14 +110,13 @@ export const editTravelStory = async (req, res, next) => {
             return next(errorHandler(404, "Travel story not found"))
         }
 
+        const placeholderImage = "http://localhost:3000/assets/placeholderImage.avif"
 
-      const placeholderImage = "http://localhost:3000/assets/placeholderImage.avif"
-
-      travelStory.title = title
-      travelStory.story = story
-      travelStory.visitedLocation = visitedLocation
-      travelStory.imageUrl = imageUrl || placeholderImage
-      travelStory.visitedDate = parsedVisitedDate
+        travelStory.title = title
+        travelStory.story = story
+        travelStory.visitedLocation = visitedLocation
+        travelStory.imageUrl = imageUrl || placeholderImage
+        travelStory.visitedDate = parsedVisitedDate
 
         await travelStory.save()
 
@@ -136,7 +124,7 @@ export const editTravelStory = async (req, res, next) => {
             story: travelStory,
             message: "Travel story updated successfully"
         })
-    } catch(error){
+    } catch (error) {
         next(error)
     }
 }
@@ -151,21 +139,20 @@ export const deleteTravelStory = async (req, res, next) => {
             return next(errorHandler(404, "Travel story not found"))
         }
 
-        // database থেকে ডিলিট
         await TravelStory.deleteOne({ _id: id, userId: userId })
 
         const placeholderImageUrl = `http://localhost:3000/assets/placeholderImage.png`
         const imageUrl = travelStory.imageUrl
 
-       if (imageUrl && imageUrl !== placeholderImageUrl) {
-         const filename = path.basename(imageUrl)
-         const filePath = path.join(rootDir, "uploads", filename)
+        if (imageUrl && imageUrl !== placeholderImageUrl) {
+            const filename = path.basename(imageUrl)
+            const filePath = path.join(rootDir, "uploads", filename)
 
-    // file.existsSync এর বদলে fs.existsSync হবে
-       if (fs.existsSync(filePath)) { 
-         await fs.promises.unlink(filePath)
-    }
-}
+            if (fs.existsSync(filePath)) {
+                await fs.promises.unlink(filePath)
+            }
+        }
+
         res.status(200).json({ message: "Travel story deleted successfully" })
     } catch (error) {
         next(error)
@@ -184,8 +171,8 @@ export const updateIsFavorite = async (req, res, next) => {
         }
         travelStory.isFavorite = isFavorite
         await travelStory.save()
-        res.status(200).json({story: travelStory, message: "Update successful"})
-    }catch (error) {
+        res.status(200).json({ story: travelStory, message: "Update successful" })
+    } catch (error) {
         next(error)
     }
 }
@@ -197,7 +184,7 @@ export const searchTravelStory = async (req, res, next) => {
     if (!query) {
         return next(errorHandler(404, "Search query is required"))
     }
-    try{
+    try {
         const travelStories = await TravelStory.find({
             userId: userId,
             $or: [
@@ -205,28 +192,27 @@ export const searchTravelStory = async (req, res, next) => {
                 { story: { $regex: query, $options: "i" } },
                 { visitedLocation: { $regex: query, $options: "i" } }
             ]
-        }).sort({ isFavorite: -1 })     
-        res.status(200).json({ stories: travelStories, })
+        }).sort({ isFavorite: -1 })
+        res.status(200).json({ stories: travelStories })
     } catch (error) {
         next(error)
     }
 }
 
 export const filterTravelStories = async (req, res, next) => {
-    const {startDate, endDate} = req.query
+    const { startDate, endDate } = req.query
     const userId = req.user.id
 
-    try{
+    try {
         const start = new Date(parseInt(startDate))
-        const end = new Date (parseInt(endDate))
+        const end = new Date(parseInt(endDate))
 
         const filteredStories = await TravelStory.find({
             userId: userId,
-            visitedDate: { $gte: start, $lte: end }.sort({ isFavorite: -1 })
-        })
+            visitedDate: { $gte: start, $lte: end }
+        }).sort({ isFavorite: -1 })
 
         res.status(200).json({ stories: filteredStories })
-
     } catch (error) {
         next(error)
     }
