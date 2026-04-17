@@ -68,10 +68,10 @@ class ApiService {
     );
     final data = jsonDecode(response.body);
     if (response.statusCode == 200) {
-      final setCookie = response.headers['set-cookie'] ?? '';
-      final tokenMatch = RegExp(r'access_token=([^;]+)').firstMatch(setCookie);
-      if (tokenMatch != null) {
-        await saveToken(tokenMatch.group(1)!);
+      // token response body থেকে নাও (Flutter Web এর জন্য)
+      final token = data['token'];
+      if (token != null) {
+        await saveToken(token);
       }
       return {'success': true, 'user': User.fromJson(data)};
     } else {
