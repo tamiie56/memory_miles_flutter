@@ -5,7 +5,15 @@ import upload from "../multer.js"
 
 const router = express.Router()
 
-router.post("/image-upload",upload.single("image"), imageUpload)
+router.post("/image-upload", (req, res, next) => {
+    upload.single("image")(req, res, (err) => {
+        if (err) {
+            console.error("Multer error:", err)
+            return res.status(500).json({ message: err.message })
+        }
+        next()
+    })
+}, imageUpload)
 
 router.delete("/delete-image", deleteImage)
 
@@ -19,7 +27,7 @@ router.delete("/delete-story/:id", verifyToken, deleteTravelStory)
 
 router.put("/update-is-favorite/:id", verifyToken, updateIsFavorite)
 
-router.get("/search", verifyToken,searchTravelStory)
+router.get("/search", verifyToken, searchTravelStory)
 
 router.get("/filter", verifyToken, filterTravelStories)
 
