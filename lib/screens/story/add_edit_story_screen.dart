@@ -26,8 +26,12 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
 
   DateTime _visitedDate = DateTime.now();
   List<String> _locations = [];
-  File? _imageFile;
-  Uint8List? _imageBytes;
+
+  // Multiple images support
+  List<File> _imageFiles = [];
+  List<Uint8List> _imageBytesList = [];
+  List<String> _existingImageUrls = []; // edit mode এ আগের images
+
   bool _loading = false;
   String? _error;
 
@@ -41,6 +45,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
       _storyCtrl.text = widget.story!.story;
       _visitedDate = widget.story!.visitedDate;
       _locations = List.from(widget.story!.visitedLocation);
+      _existingImageUrls = List.from(widget.story!.imageUrls);
     }
   }
 
@@ -52,15 +57,19 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImages() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-    if (picked != null) {
+    final picked = await picker.pickMultiImage(imageQuality: 80);
+    if (picked.isNotEmpty) {
       if (kIsWeb) {
-        final bytes = await picked.readAsBytes();
-        setState(() => _imageBytes = bytes);
+        for (final xfile in picked) {
+          final bytes = await xfile.readAsBytes();
+          setState(() => _imageBytesList.add(bytes));
+        }
       } else {
-        setState(() => _imageFile = File(picked.path));
+        setState(() {
+          _imageFiles.addAll(picked.map((x) => File(x.path)));
+        });
       }
     }
   }
@@ -100,7 +109,10 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
       setState(() => _error = 'Please enter the story');
       return;
     }
-    setState(() { _error = null; _loading = true; });
+    setState(() {
+      _error = null;
+      _loading = true;
+    });
 
     final provider = context.read<StoryProvider>();
     bool success;
@@ -110,11 +122,11 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
         id: widget.story!.id,
         title: _titleCtrl.text.trim(),
         story: _storyCtrl.text.trim(),
-        currentImageUrl: widget.story!.imageUrl,
+        currentImageUrls: _existingImageUrls,
         visitedLocation: _locations,
         visitedDate: _visitedDate,
-        newImageFile: _imageFile,
-        newImageBytes: _imageBytes,
+        newImageFiles: _imageFiles.isNotEmpty ? _imageFiles : null,
+        newImageBytesList: _imageBytesList.isNotEmpty ? _imageBytesList : null,
       );
     } else {
       success = await provider.addStory(
@@ -122,8 +134,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
         story: _storyCtrl.text.trim(),
         visitedLocation: _locations,
         visitedDate: _visitedDate,
-        imageFile: _imageFile,
-        imageBytes: _imageBytes,
+        imageFiles: _imageFiles.isNotEmpty ? _imageFiles : null,
+        imageBytesList: _imageBytesList.isNotEmpty ? _imageBytesList : null,
       );
     }
 
@@ -141,6 +153,10 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
     }
   }
 
+  int get _totalImages =>
+      _existingImageUrls.length +
+          (kIsWeb ? _imageBytesList.length : _imageFiles.length);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -155,7 +171,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                 ? const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: AppTheme.primary),
             )
                 : Text(
               isEdit ? 'UPDATE' : 'ADD',
@@ -179,7 +196,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(_error!,
-                    style: const TextStyle(color: AppTheme.danger, fontSize: 13)),
+                    style:
+                    const TextStyle(color: AppTheme.danger, fontSize: 13)),
               ),
 
             _label('TITLE'),
@@ -187,7 +205,9 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
             TextField(
               controller: _titleCtrl,
               style: const TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark),
               decoration: const InputDecoration(
                 hintText: 'Once Upon A Time...',
                 border: InputBorder.none,
@@ -199,17 +219,20 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
             const Divider(),
             const SizedBox(height: 16),
 
+            // Date picker
             GestureDetector(
               onTap: _pickDate,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: AppTheme.primaryLight,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today, color: AppTheme.primary, size: 18),
+                    const Icon(Icons.calendar_today,
+                        color: AppTheme.primary, size: 18),
                     const SizedBox(width: 10),
                     Text(
                       '${_visitedDate.day} ${_monthName(_visitedDate.month)} ${_visitedDate.year}',
@@ -224,32 +247,90 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
             ),
             const SizedBox(height: 16),
 
-            _label('COVER IMAGE'),
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                height: 180,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryLight,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
+            // Images section
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _label('IMAGES ($_totalImages selected)'),
+                TextButton.icon(
+                  onPressed: _pickImages,
+                  icon: const Icon(Icons.add_photo_alternate_outlined,
+                      color: AppTheme.primary, size: 18),
+                  label: const Text('Add Images',
+                      style: TextStyle(color: AppTheme.primary, fontSize: 12)),
                 ),
-                clipBehavior: Clip.hardEdge,
-                child: _imageBytes != null
-                    ? Image.memory(_imageBytes!, fit: BoxFit.cover)
-                    : _imageFile != null
-                    ? Image.file(_imageFile!, fit: BoxFit.cover)
-                    : (isEdit && widget.story!.imageUrl.isNotEmpty)
-                    ? Image.network(widget.story!.imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _imagePlaceholder())
-                    : _imagePlaceholder(),
-              ),
+              ],
             ),
+            const SizedBox(height: 8),
+
+            // Image preview grid
+            if (_totalImages > 0)
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate:
+                const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                ),
+                itemCount: _totalImages,
+                itemBuilder: (context, index) {
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: _buildImagePreview(index),
+                      ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: () => _removeImage(index),
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close,
+                                color: Colors.white, size: 14),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              )
+            else
+              GestureDetector(
+                onTap: _pickImages,
+                child: Container(
+                  height: 120,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryLight,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: AppTheme.primary.withOpacity(0.3)),
+                  ),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_photo_alternate_outlined,
+                          color: AppTheme.primary, size: 36),
+                      SizedBox(height: 8),
+                      Text('Tap to add images',
+                          style: TextStyle(
+                              color: AppTheme.primary, fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ),
             const SizedBox(height: 20),
 
+            // Story
             _label('STORY'),
             const SizedBox(height: 8),
             Container(
@@ -272,6 +353,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
             ),
             const SizedBox(height: 20),
 
+            // Visited locations
             _label('VISITED LOCATIONS'),
             const SizedBox(height: 8),
             Row(
@@ -305,10 +387,12 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                   .map((loc) => Chip(
                 label: Text(loc),
                 backgroundColor: AppTheme.primaryLight,
-                labelStyle: const TextStyle(color: AppTheme.primary),
+                labelStyle:
+                const TextStyle(color: AppTheme.primary),
                 deleteIcon: const Icon(Icons.close,
                     size: 16, color: AppTheme.primary),
-                onDeleted: () => setState(() => _locations.remove(loc)),
+                onDeleted: () =>
+                    setState(() => _locations.remove(loc)),
               ))
                   .toList(),
             ),
@@ -317,6 +401,34 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildImagePreview(int index) {
+    // existing images (edit mode)
+    if (index < _existingImageUrls.length) {
+      return Image.network(_existingImageUrls[index], fit: BoxFit.cover);
+    }
+    final newIndex = index - _existingImageUrls.length;
+    if (kIsWeb) {
+      return Image.memory(_imageBytesList[newIndex], fit: BoxFit.cover);
+    } else {
+      return Image.file(_imageFiles[newIndex], fit: BoxFit.cover);
+    }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      if (index < _existingImageUrls.length) {
+        _existingImageUrls.removeAt(index);
+      } else {
+        final newIndex = index - _existingImageUrls.length;
+        if (kIsWeb) {
+          _imageBytesList.removeAt(newIndex);
+        } else {
+          _imageFiles.removeAt(newIndex);
+        }
+      }
+    });
   }
 
   Widget _label(String text) => Text(
@@ -328,19 +440,10 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
         letterSpacing: 1),
   );
 
-  Widget _imagePlaceholder() => Column(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: const [
-      Icon(Icons.add_photo_alternate_outlined, color: AppTheme.primary, size: 36),
-      SizedBox(height: 8),
-      Text('Tap to add cover image',
-          style: TextStyle(color: AppTheme.primary, fontSize: 13)),
-    ],
-  );
-
   String _monthName(int month) {
     const months = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      '',
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return months[month];

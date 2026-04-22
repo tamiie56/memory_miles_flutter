@@ -7,7 +7,7 @@ class TravelStory {
   final List<String> visitedLocation;
   final bool isFavorite;
   final String userId;
-  final String imageUrl;
+  final List<String> imageUrls;
   final DateTime visitedDate;
   final DateTime createdAt;
 
@@ -18,7 +18,7 @@ class TravelStory {
     required this.visitedLocation,
     required this.isFavorite,
     required this.userId,
-    required this.imageUrl,
+    required this.imageUrls,
     required this.visitedDate,
     required this.createdAt,
   });
@@ -31,7 +31,7 @@ class TravelStory {
       visitedLocation: List<String>.from(json['visitedLocation'] ?? []),
       isFavorite: json['isFavorite'] ?? false,
       userId: json['userId'] ?? '',
-      imageUrl: json['imageUrl'] ?? '',
+      imageUrls: List<String>.from(json['imageUrls'] ?? []),
       visitedDate: json['visitedDate'] != null
           ? DateTime.parse(json['visitedDate'])
           : DateTime.now(),
@@ -49,7 +49,7 @@ class TravelStory {
       visitedLocation: visitedLocation,
       isFavorite: isFavorite ?? this.isFavorite,
       userId: userId,
-      imageUrl: imageUrl,
+      imageUrls: imageUrls,
       visitedDate: visitedDate,
       createdAt: createdAt,
     );

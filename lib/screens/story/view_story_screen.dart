@@ -32,11 +32,11 @@ class ViewStoryScreen extends StatelessWidget {
                   color: Colors.white.withOpacity(0.85),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.arrow_back, color: AppTheme.textDark),
+                child:
+                const Icon(Icons.arrow_back, color: AppTheme.textDark),
               ),
             ),
             actions: [
-              // Edit
               GestureDetector(
                 onTap: () => Navigator.push(
                   context,
@@ -45,49 +45,66 @@ class ViewStoryScreen extends StatelessWidget {
                 ),
                 child: Container(
                   margin: const EdgeInsets.all(8),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.85),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.edit_outlined, size: 16, color: AppTheme.primary),
+                      Icon(Icons.edit_outlined,
+                          size: 16, color: AppTheme.primary),
                       SizedBox(width: 4),
-                      Text('Edit', style: TextStyle(color: AppTheme.primary, fontSize: 13)),
+                      Text('Edit',
+                          style: TextStyle(
+                              color: AppTheme.primary, fontSize: 13)),
                     ],
                   ),
                 ),
               ),
-              // Delete
               GestureDetector(
                 onTap: () => _confirmDelete(context),
                 child: Container(
-                  margin: const EdgeInsets.only(right: 8, top: 8, bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  margin:
+                  const EdgeInsets.only(right: 8, top: 8, bottom: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.85),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.delete_outline, size: 16, color: AppTheme.danger),
+                      Icon(Icons.delete_outline,
+                          size: 16, color: AppTheme.danger),
                       SizedBox(width: 4),
-                      Text('Delete', style: TextStyle(color: AppTheme.danger, fontSize: 13)),
+                      Text('Delete',
+                          style: TextStyle(
+                              color: AppTheme.danger, fontSize: 13)),
                     ],
                   ),
                 ),
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              background: Image.network(
-                story.imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: AppTheme.primaryLight,
-                  child: const Icon(Icons.image_outlined,
-                      color: AppTheme.primary, size: 60),
+              background: story.imageUrls.isNotEmpty
+                  ? PageView.builder(
+                itemCount: story.imageUrls.length,
+                itemBuilder: (context, index) => Image.network(
+                  story.imageUrls[index],
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: AppTheme.primaryLight,
+                    child: const Icon(Icons.image_outlined,
+                        color: AppTheme.primary, size: 60),
+                  ),
                 ),
+              )
+                  : Container(
+                color: AppTheme.primaryLight,
+                child: const Icon(Icons.image_outlined,
+                    color: AppTheme.primary, size: 60),
               ),
             ),
           ),
@@ -98,7 +115,24 @@ class ViewStoryScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
+                  // Image count indicator
+                  if (story.imageUrls.length > 1)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.photo_library,
+                              size: 14, color: AppTheme.textMid),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${story.imageUrls.length} photos — swipe to view',
+                            style: const TextStyle(
+                                fontSize: 12, color: AppTheme.textMid),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   Text(
                     story.title,
                     style: const TextStyle(
@@ -109,7 +143,6 @@ class ViewStoryScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  // Date & locations row
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -147,7 +180,6 @@ class ViewStoryScreen extends StatelessWidget {
                   const Divider(),
                   const SizedBox(height: 16),
 
-                  // Story content
                   Text(
                     story.story,
                     style: const TextStyle(
@@ -172,7 +204,8 @@ class ViewStoryScreen extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Delete Story'),
-        content: const Text('Are you sure you want to delete this story?'),
+        content:
+        const Text('Are you sure you want to delete this story?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -180,7 +213,8 @@ class ViewStoryScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
+            style:
+            TextButton.styleFrom(foregroundColor: AppTheme.danger),
             child: const Text('Delete'),
           ),
         ],
@@ -188,7 +222,8 @@ class ViewStoryScreen extends StatelessWidget {
     );
 
     if (confirm == true && context.mounted) {
-      final success = await context.read<StoryProvider>().deleteStory(story.id);
+      final success =
+      await context.read<StoryProvider>().deleteStory(story.id);
       if (context.mounted) {
         if (success) {
           Navigator.pop(context);

@@ -5,19 +5,21 @@ import path from "path"
 import fs from "fs"
 
 export const addTravelStory = async (req, res, next) => {
-    const { title, story, visitedLocation, isFavorite, imageUrl, visitedDate } = req.body
+    const { title, story, visitedLocation, isFavorite, imageUrls, visitedDate } = req.body
 
     const userId = req.user.id
 
-    // validate required fields (imageUrl optional)
     if (!title || !story || !visitedLocation || !visitedDate) {
         return next(errorHandler(400, "All fields are required"))
     }
 
-    const placeholderImage = "http://localhost:3000/assets/placeholderImage.avif"
-
-    // convert visited date from milliseconds to date object
     const parsedVisitedDate = new Date(parseInt(visitedDate))
+
+    // imageUrls array parse করা
+    let parsedImageUrls = []
+    if (imageUrls) {
+        parsedImageUrls = typeof imageUrls === 'string' ? JSON.parse(imageUrls) : imageUrls
+    }
 
     try {
         const travelStory = new TravelStory({
@@ -25,7 +27,7 @@ export const addTravelStory = async (req, res, next) => {
             story,
             visitedLocation,
             userId,
-            imageUrl: imageUrl || placeholderImage,
+            imageUrls: parsedImageUrls,
             visitedDate: parsedVisitedDate,
         })
         await travelStory.save()
@@ -53,13 +55,13 @@ export const getAllTravelStory = async (req, res, next) => {
 
 export const imageUpload = async (req, res, next) => {
     try {
-        if (!req.file) {
-            return next(errorHandler(400, "No image uploaded"))
+        if (!req.files || req.files.length === 0) {
+            return next(errorHandler(400, "No images uploaded"))
         }
 
-        const imageUrl = `http://localhost:3000/uploads/${req.file.filename}`
+        const imageUrls = req.files.map(file => `http://localhost:3000/uploads/${file.filename}`)
 
-        res.status(201).json({ imageUrl })
+        res.status(201).json({ imageUrls })
     } catch (error) {
         next(error)
     }
@@ -67,7 +69,6 @@ export const imageUpload = async (req, res, next) => {
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-
 const rootDir = path.join(__dirname, "..")
 
 export const deleteImage = async (req, res, next) => {
@@ -94,7 +95,7 @@ export const deleteImage = async (req, res, next) => {
 
 export const editTravelStory = async (req, res, next) => {
     const { id } = req.params
-    const { title, story, visitedLocation, imageUrl, visitedDate } = req.body
+    const { title, story, visitedLocation, imageUrls, visitedDate } = req.body
     const userId = req.user.id
 
     if (!title || !story || !visitedLocation || !visitedDate) {
@@ -103,6 +104,11 @@ export const editTravelStory = async (req, res, next) => {
 
     const parsedVisitedDate = new Date(parseInt(visitedDate))
 
+    let parsedImageUrls = []
+    if (imageUrls) {
+        parsedImageUrls = typeof imageUrls === 'string' ? JSON.parse(imageUrls) : imageUrls
+    }
+
     try {
         const travelStory = await TravelStory.findOne({ _id: id, userId: userId })
 
@@ -110,12 +116,10 @@ export const editTravelStory = async (req, res, next) => {
             return next(errorHandler(404, "Travel story not found"))
         }
 
-        const placeholderImage = "http://localhost:3000/assets/placeholderImage.avif"
-
         travelStory.title = title
         travelStory.story = story
         travelStory.visitedLocation = visitedLocation
-        travelStory.imageUrl = imageUrl || placeholderImage
+        travelStory.imageUrls = parsedImageUrls
         travelStory.visitedDate = parsedVisitedDate
 
         await travelStory.save()
@@ -141,15 +145,14 @@ export const deleteTravelStory = async (req, res, next) => {
 
         await TravelStory.deleteOne({ _id: id, userId: userId })
 
-        const placeholderImageUrl = `http://localhost:3000/assets/placeholderImage.png`
-        const imageUrl = travelStory.imageUrl
-
-        if (imageUrl && imageUrl !== placeholderImageUrl) {
-            const filename = path.basename(imageUrl)
-            const filePath = path.join(rootDir, "uploads", filename)
-
-            if (fs.existsSync(filePath)) {
-                await fs.promises.unlink(filePath)
+        // সব images delete করা
+        if (travelStory.imageUrls && travelStory.imageUrls.length > 0) {
+            for (const imageUrl of travelStory.imageUrls) {
+                const filename = path.basename(imageUrl)
+                const filePath = path.join(rootDir, "uploads", filename)
+                if (fs.existsSync(filePath)) {
+                    await fs.promises.unlink(filePath)
+                }
             }
         }
 
