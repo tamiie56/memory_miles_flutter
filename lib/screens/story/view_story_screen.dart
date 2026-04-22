@@ -147,7 +147,7 @@ class ViewStoryScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        DateFormat('do MMM yyyy').format(story.visitedDate),
+                        DateFormat('dd MMM yyyy').format(story.visitedDate),
                         style: const TextStyle(
                             fontSize: 13, color: AppTheme.textMid),
                       ),
