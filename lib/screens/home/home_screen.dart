@@ -79,7 +79,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
-          // User avatar
           if (user != null)
             Container(
               margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
@@ -110,7 +109,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-          // Logout
           IconButton(
             icon: const Icon(Icons.logout, color: AppTheme.textMid),
             onPressed: _signout,
@@ -132,9 +130,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 prefixIcon: const Icon(Icons.search, color: AppTheme.textMid),
                 suffixIcon: _searchCtrl.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.close, color: AppTheme.textMid),
-                        onPressed: _clearSearch,
-                      )
+                  icon: const Icon(Icons.close, color: AppTheme.textMid),
+                  onPressed: _clearSearch,
+                )
                     : null,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 filled: true,
@@ -146,45 +144,48 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: loading
           ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.primary))
+          child: CircularProgressIndicator(color: AppTheme.primary))
           : stories.isEmpty
-              ? _emptyState(context)
-              : RefreshIndicator(
-                  onRefresh: () => context.read<StoryProvider>().fetchAllStories(),
-                  color: AppTheme.primary,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 0.65,
-                      ),
-                      itemCount: stories.length,
-                      itemBuilder: (context, index) {
-                        final story = stories[index];
-                        return StoryCard(
-                          story: story,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => ViewStoryScreen(story: story)),
-                          ),
-                          onFavorite: () =>
-                              context.read<StoryProvider>().toggleFavorite(story),
-                          onEdit: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) =>
-                                    AddEditStoryScreen(story: story)),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+          ? _emptyState()
+          : RefreshIndicator(
+        onRefresh: () =>
+            context.read<StoryProvider>().fetchAllStories(),
+        color: AppTheme.primary,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: GridView.builder(
+            gridDelegate:
+            const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.65,
+            ),
+            itemCount: stories.length,
+            itemBuilder: (context, index) {
+              final story = stories[index];
+              return StoryCard(
+                story: story,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          ViewStoryScreen(story: story)),
                 ),
+                onFavorite: () => context
+                    .read<StoryProvider>()
+                    .toggleFavorite(story),
+                onEdit: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          AddEditStoryScreen(story: story)),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(
           context,
@@ -196,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _emptyState(BuildContext context) {
+  Widget _emptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -206,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
             height: 180,
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) =>
-                const Icon(Icons.flight, size: 80, color: AppTheme.primary),
+            const Icon(Icons.flight, size: 80, color: AppTheme.primary),
           ),
           const SizedBox(height: 24),
           const Text(
@@ -221,17 +222,6 @@ class _HomeScreenState extends State<HomeScreen> {
             'Start creating your first travel story!\nTap the + button to get started.',
             textAlign: TextAlign.center,
             style: TextStyle(color: AppTheme.textMid, height: 1.5),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AddEditStoryScreen()),
-            ),
-            icon: const Icon(Icons.add),
-            label: const Text('Add Story'),
-            style: ElevatedButton.styleFrom(
-                minimumSize: const Size(160, 46)),
           ),
         ],
       ),

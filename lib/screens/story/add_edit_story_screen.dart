@@ -27,10 +27,9 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
   DateTime _visitedDate = DateTime.now();
   List<String> _locations = [];
 
-  // Multiple images support
   List<File> _imageFiles = [];
   List<Uint8List> _imageBytesList = [];
-  List<String> _existingImageUrls = []; // edit mode এ আগের images
+  List<String> _existingImageUrls = [];
 
   bool _loading = false;
   String? _error;
@@ -196,8 +195,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(_error!,
-                    style:
-                    const TextStyle(color: AppTheme.danger, fontSize: 13)),
+                    style: const TextStyle(
+                        color: AppTheme.danger, fontSize: 13)),
               ),
 
             _label('TITLE'),
@@ -223,8 +222,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
             GestureDetector(
               onTap: _pickDate,
               child: Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: AppTheme.primaryLight,
                   borderRadius: BorderRadius.circular(8),
@@ -237,10 +236,12 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                     Text(
                       '${_visitedDate.day} ${_monthName(_visitedDate.month)} ${_visitedDate.year}',
                       style: const TextStyle(
-                          color: AppTheme.primary, fontWeight: FontWeight.w500),
+                          color: AppTheme.primary,
+                          fontWeight: FontWeight.w500),
                     ),
                     const Spacer(),
-                    const Icon(Icons.edit, color: AppTheme.primary, size: 16),
+                    const Icon(Icons.edit,
+                        color: AppTheme.primary, size: 16),
                   ],
                 ),
               ),
@@ -248,23 +249,10 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
             const SizedBox(height: 16),
 
             // Images section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _label('IMAGES ($_totalImages selected)'),
-                TextButton.icon(
-                  onPressed: _pickImages,
-                  icon: const Icon(Icons.add_photo_alternate_outlined,
-                      color: AppTheme.primary, size: 18),
-                  label: const Text('Add Images',
-                      style: TextStyle(color: AppTheme.primary, fontSize: 12)),
-                ),
-              ],
-            ),
+            _label('IMAGES ($_totalImages selected)'),
             const SizedBox(height: 8),
 
-            // Image preview grid
-            if (_totalImages > 0)
+            if (_totalImages > 0) ...[
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -302,8 +290,32 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                     ],
                   );
                 },
-              )
-            else
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: _pickImages,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                        color: AppTheme.primary.withOpacity(0.3)),
+                    borderRadius: BorderRadius.circular(8),
+                    color: AppTheme.primaryLight,
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_photo_alternate_outlined,
+                          color: AppTheme.primary, size: 18),
+                      SizedBox(width: 6),
+                      Text('Add More Images',
+                          style: TextStyle(
+                              color: AppTheme.primary, fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ),
+            ] else
               GestureDetector(
                 onTap: _pickImages,
                 child: Container(
@@ -404,7 +416,6 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
   }
 
   Widget _buildImagePreview(int index) {
-    // existing images (edit mode)
     if (index < _existingImageUrls.length) {
       return Image.network(_existingImageUrls[index], fit: BoxFit.cover);
     }
