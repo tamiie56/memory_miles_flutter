@@ -5,8 +5,9 @@ import upload from "../multer.js"
 
 const router = express.Router()
 
+// single → array (max 10 images)
 router.post("/image-upload", (req, res, next) => {
-    upload.single("image")(req, res, (err) => {
+    upload.array("images", 10)(req, res, (err) => {
         if (err) {
             console.error("Multer error:", err)
             return res.status(500).json({ message: err.message })

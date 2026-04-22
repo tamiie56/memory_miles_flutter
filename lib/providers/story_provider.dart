@@ -27,22 +27,20 @@ class StoryProvider extends ChangeNotifier {
     required String story,
     required List<String> visitedLocation,
     required DateTime visitedDate,
-    File? imageFile,
-    Uint8List? imageBytes,
+    List<File>? imageFiles,
+    List<Uint8List>? imageBytesList,
   }) async {
-    String imageUrl = '';
-    if (kIsWeb && imageBytes != null) {
-      final uploaded = await ApiService.uploadImageBytes(imageBytes, 'image.jpg');
-      imageUrl = uploaded ?? '';
-    } else if (imageFile != null) {
-      final uploaded = await ApiService.uploadImage(imageFile);
-      imageUrl = uploaded ?? '';
+    List<String> imageUrls = [];
+    if (kIsWeb && imageBytesList != null && imageBytesList.isNotEmpty) {
+      imageUrls = await ApiService.uploadImageBytesList(imageBytesList);
+    } else if (imageFiles != null && imageFiles.isNotEmpty) {
+      imageUrls = await ApiService.uploadImages(imageFiles);
     }
 
     final result = await ApiService.addStory(
       title: title,
       story: story,
-      imageUrl: imageUrl,
+      imageUrls: imageUrls,
       visitedLocation: visitedLocation,
       visitedDate: visitedDate,
     );
@@ -58,26 +56,27 @@ class StoryProvider extends ChangeNotifier {
     required String id,
     required String title,
     required String story,
-    required String currentImageUrl,
+    required List<String> currentImageUrls,
     required List<String> visitedLocation,
     required DateTime visitedDate,
-    File? newImageFile,
-    Uint8List? newImageBytes,
+    List<File>? newImageFiles,
+    List<Uint8List>? newImageBytesList,
   }) async {
-    String imageUrl = currentImageUrl;
-    if (kIsWeb && newImageBytes != null) {
-      final uploaded = await ApiService.uploadImageBytes(newImageBytes, 'image.jpg');
-      imageUrl = uploaded ?? currentImageUrl;
-    } else if (newImageFile != null) {
-      final uploaded = await ApiService.uploadImage(newImageFile);
-      imageUrl = uploaded ?? currentImageUrl;
+    List<String> imageUrls = List.from(currentImageUrls);
+
+    if (kIsWeb && newImageBytesList != null && newImageBytesList.isNotEmpty) {
+      final uploaded = await ApiService.uploadImageBytesList(newImageBytesList);
+      imageUrls.addAll(uploaded);
+    } else if (newImageFiles != null && newImageFiles.isNotEmpty) {
+      final uploaded = await ApiService.uploadImages(newImageFiles);
+      imageUrls.addAll(uploaded);
     }
 
     final result = await ApiService.editStory(
       id: id,
       title: title,
       story: story,
-      imageUrl: imageUrl,
+      imageUrls: imageUrls,
       visitedLocation: visitedLocation,
       visitedDate: visitedDate,
     );

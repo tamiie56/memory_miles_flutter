@@ -27,17 +27,16 @@ const travelStorySchema = new mongoose.Schema({
     required: true,
    },
 
-   imageUrl: {
-    type: String,
-    required: true,
+   // imageUrl → imageUrls (array)
+   imageUrls: {
+    type: [String],
+    default: [],
    },
 
    visitedDate: {
     type: Date,
     required: true,
    },
-
-
 }, 
 { timestamps: true }
 )
