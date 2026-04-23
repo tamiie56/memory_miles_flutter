@@ -1,8 +1,5 @@
-import { fileURLToPath } from "url"
 import TravelStory from "../models/travelStory.model.js"
 import { errorHandler } from "../utils/error.js"
-import path from "path"
-import fs from "fs"
 
 export const addTravelStory = async (req, res, next) => {
     const { title, story, visitedLocation, isFavorite, imageUrls, visitedDate } = req.body
@@ -15,7 +12,6 @@ export const addTravelStory = async (req, res, next) => {
 
     const parsedVisitedDate = new Date(parseInt(visitedDate))
 
-    // imageUrls array parse করা
     let parsedImageUrls = []
     if (imageUrls) {
         parsedImageUrls = typeof imageUrls === 'string' ? JSON.parse(imageUrls) : imageUrls
@@ -56,41 +52,21 @@ export const getAllTravelStory = async (req, res, next) => {
 export const imageUpload = async (req, res, next) => {
     try {
         if (!req.files || req.files.length === 0) {
-            return next(errorHandler(400, "No images uploaded"))
+            return next(errorHandler(400, "No files uploaded"))
         }
 
-        const imageUrls = req.files.map(file => `http://localhost:3000/uploads/${file.filename}`)
+        // Cloudinary থেকে URL নেওয়া
+        const urls = req.files.map(file => file.path)
 
-        res.status(201).json({ imageUrls })
+        res.status(201).json({ imageUrls: urls })
     } catch (error) {
         next(error)
     }
 }
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const rootDir = path.join(__dirname, "..")
-
 export const deleteImage = async (req, res, next) => {
-    const { imageUrl } = req.query
-
-    if (!imageUrl) {
-        return next(errorHandler(400, "Image URL is required"))
-    }
-
-    try {
-        const filename = path.basename(imageUrl)
-        const filePath = path.join(rootDir, "uploads", filename)
-
-        if (!fs.existsSync(filePath)) {
-            return next(errorHandler(404, "Image not found"))
-        }
-
-        await fs.promises.unlink(filePath)
-        res.status(200).json({ message: "Image deleted successfully" })
-    } catch (error) {
-        next(error)
-    }
+    // Cloudinary use করলে local file delete দরকার নেই
+    res.status(200).json({ message: "Image deleted successfully" })
 }
 
 export const editTravelStory = async (req, res, next) => {
@@ -144,17 +120,6 @@ export const deleteTravelStory = async (req, res, next) => {
         }
 
         await TravelStory.deleteOne({ _id: id, userId: userId })
-
-        // সব images delete করা
-        if (travelStory.imageUrls && travelStory.imageUrls.length > 0) {
-            for (const imageUrl of travelStory.imageUrls) {
-                const filename = path.basename(imageUrl)
-                const filePath = path.join(rootDir, "uploads", filename)
-                if (fs.existsSync(filePath)) {
-                    await fs.promises.unlink(filePath)
-                }
-            }
-        }
 
         res.status(200).json({ message: "Travel story deleted successfully" })
     } catch (error) {

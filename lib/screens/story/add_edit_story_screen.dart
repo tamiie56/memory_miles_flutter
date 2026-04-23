@@ -436,6 +436,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
         if (kIsWeb) {
           _imageBytesList.removeAt(newIndex);
         } else {
+
           _imageFiles.removeAt(newIndex);
         }
       }

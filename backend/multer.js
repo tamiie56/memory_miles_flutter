@@ -1,30 +1,48 @@
-import multer from "multer";
-import path from "path"
+import { v2 as cloudinary } from "cloudinary"
+import { CloudinaryStorage } from "multer-storage-cloudinary"
+import multer from "multer"
+import dotenv from "dotenv"
 
-// storage configuration
-const storage = multer.diskStorage({
-    destination: function(req, file, cb){
-        cb(null, "./uploads/")
-    },
-    filename: function(req, file, cb){
-       cb(null, Date.now() + path.extname(file.originalname))
+dotenv.config()
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+})
+
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: async (req, file) => {
+        const isVideo = file.mimetype.startsWith("video/")
+        return {
+            folder: "memory_miles",
+            resource_type: isVideo ? "video" : "image",
+            allowed_formats: ["jpg", "jpeg", "png", "gif", "webp", "mp4", "mov", "avi"],
+        }
     },
 })
 
-// file filter - Flutter Web থেকে আসা file accept করার জন্য
 const fileFilter = (req, file, cb) => {
-    const allowedExtensions = /\.(jpg|jpeg|png|gif|webp|bmp)$/i
+    const allowedMimes = [
+        "image/jpeg", "image/png", "image/gif", "image/webp",
+        "video/mp4", "video/quicktime", "video/avi",
+        "application/octet-stream"
+    ]
+    const allowedExtensions = /\.(jpg|jpeg|png|gif|webp|mp4|mov|avi)$/i
 
-    if (file.mimetype.startsWith("image/") ||
-        file.mimetype === "application/octet-stream" ||
-        allowedExtensions.test(file.originalname)) {
+    if (
+        file.mimetype.startsWith("image/") ||
+        file.mimetype.startsWith("video/") ||
+        allowedMimes.includes(file.mimetype) ||
+        allowedExtensions.test(file.originalname)
+    ) {
         cb(null, true)
     } else {
-        cb(new Error("Only image files are allowed"), false)
+        cb(new Error("Only image and video files are allowed"), false)
     }
 }
 
-// initialize multer instance
-const upload = multer({storage, fileFilter})
+const upload = multer({ storage, fileFilter })
 
 export default upload
