@@ -21,8 +21,12 @@ class StoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstImage =
-    story.imageUrls.isNotEmpty ? story.imageUrls.first : null;
+    final firstImage = story.firstImageUrl;
+    final firstVideo = story.videoOnlyUrls.isNotEmpty
+        ? story.videoOnlyUrls.first
+        : null;
+    final hasVideo = story.videoOnlyUrls.isNotEmpty;
+    final totalMedia = story.mediaUrls.length;
 
     return GestureDetector(
       onTap: onTap,
@@ -41,7 +45,7 @@ class StoryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
+            // Thumbnail
             Stack(
               children: [
                 ClipRRect(
@@ -53,12 +57,15 @@ class StoryCard extends StatelessWidget {
                     height: 140,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _imagePlaceholder(),
+                    errorBuilder: (_, __, ___) => _placeholder(),
                   )
-                      : _imagePlaceholder(),
+                      : firstVideo != null
+                      ? _videoThumbnailPlaceholder()
+                      : _placeholder(),
                 ),
-                // Image count badge
-                if (story.imageUrls.length > 1)
+
+                // Media count badge
+                if (totalMedia > 1)
                   Positioned(
                     bottom: 8,
                     left: 8,
@@ -76,7 +83,7 @@ class StoryCard extends StatelessWidget {
                               color: Colors.white, size: 12),
                           const SizedBox(width: 4),
                           Text(
-                            '${story.imageUrls.length}',
+                            '$totalMedia',
                             style: const TextStyle(
                                 color: Colors.white, fontSize: 11),
                           ),
@@ -84,6 +91,33 @@ class StoryCard extends StatelessWidget {
                       ),
                     ),
                   ),
+
+                // Video indicator
+                if (hasVideo)
+                  Positioned(
+                    bottom: 8,
+                    right: 40,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.videocam,
+                              color: Colors.white, size: 12),
+                          SizedBox(width: 4),
+                          Text('Video',
+                              style: TextStyle(
+                                  color: Colors.white, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                  ),
+
                 // Favorite button
                 Positioned(
                   top: 8,
@@ -100,8 +134,9 @@ class StoryCard extends StatelessWidget {
                         story.isFavorite
                             ? Icons.favorite
                             : Icons.favorite_border,
-                        color:
-                        story.isFavorite ? Colors.red : AppTheme.textMid,
+                        color: story.isFavorite
+                            ? Colors.red
+                            : AppTheme.textMid,
                         size: 18,
                       ),
                     ),
@@ -138,7 +173,9 @@ class StoryCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontSize: 12, color: AppTheme.textMid, height: 1.4),
+                        fontSize: 12,
+                        color: AppTheme.textMid,
+                        height: 1.4),
                   ),
                   const SizedBox(height: 8),
                   if (story.visitedLocation.isNotEmpty)
@@ -157,7 +194,8 @@ class StoryCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.location_on,
-                                size: 11, color: AppTheme.primary),
+                                size: 11,
+                                color: AppTheme.primary),
                             const SizedBox(width: 2),
                             Text(loc,
                                 style: const TextStyle(
@@ -177,10 +215,19 @@ class StoryCard extends StatelessWidget {
     );
   }
 
-  Widget _imagePlaceholder() => Container(
+  Widget _placeholder() => Container(
     height: 140,
     color: AppTheme.primaryLight,
     child: const Icon(Icons.image_outlined,
         color: AppTheme.primary, size: 40),
+  );
+
+  Widget _videoThumbnailPlaceholder() => Container(
+    height: 140,
+    color: Colors.black87,
+    child: const Center(
+      child: Icon(Icons.play_circle_fill,
+          color: Colors.white, size: 50),
+    ),
   );
 }

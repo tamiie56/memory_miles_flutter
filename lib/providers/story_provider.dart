@@ -27,20 +27,25 @@ class StoryProvider extends ChangeNotifier {
     required String story,
     required List<String> visitedLocation,
     required DateTime visitedDate,
-    List<File>? imageFiles,
-    List<Uint8List>? imageBytesList,
+    List<File>? mediaFiles,
+    List<Uint8List>? mediaBytesList,
+    List<String>? mediaFilenames,
   }) async {
-    List<String> imageUrls = [];
-    if (kIsWeb && imageBytesList != null && imageBytesList.isNotEmpty) {
-      imageUrls = await ApiService.uploadImageBytesList(imageBytesList);
-    } else if (imageFiles != null && imageFiles.isNotEmpty) {
-      imageUrls = await ApiService.uploadImages(imageFiles);
+    List<String> mediaUrls = [];
+
+    if (kIsWeb && mediaBytesList != null && mediaBytesList.isNotEmpty) {
+      mediaUrls = await ApiService.uploadMediaBytesList(
+        mediaBytesList,
+        mediaFilenames ?? List.generate(mediaBytesList.length, (i) => 'media_$i.jpg'),
+      );
+    } else if (mediaFiles != null && mediaFiles.isNotEmpty) {
+      mediaUrls = await ApiService.uploadMediaFiles(mediaFiles);
     }
 
     final result = await ApiService.addStory(
       title: title,
       story: story,
-      imageUrls: imageUrls,
+      mediaUrls: mediaUrls,
       visitedLocation: visitedLocation,
       visitedDate: visitedDate,
     );
@@ -56,27 +61,31 @@ class StoryProvider extends ChangeNotifier {
     required String id,
     required String title,
     required String story,
-    required List<String> currentImageUrls,
+    required List<String> currentMediaUrls,
     required List<String> visitedLocation,
     required DateTime visitedDate,
-    List<File>? newImageFiles,
-    List<Uint8List>? newImageBytesList,
+    List<File>? newMediaFiles,
+    List<Uint8List>? newMediaBytesList,
+    List<String>? newMediaFilenames,
   }) async {
-    List<String> imageUrls = List.from(currentImageUrls);
+    List<String> mediaUrls = List.from(currentMediaUrls);
 
-    if (kIsWeb && newImageBytesList != null && newImageBytesList.isNotEmpty) {
-      final uploaded = await ApiService.uploadImageBytesList(newImageBytesList);
-      imageUrls.addAll(uploaded);
-    } else if (newImageFiles != null && newImageFiles.isNotEmpty) {
-      final uploaded = await ApiService.uploadImages(newImageFiles);
-      imageUrls.addAll(uploaded);
+    if (kIsWeb && newMediaBytesList != null && newMediaBytesList.isNotEmpty) {
+      final uploaded = await ApiService.uploadMediaBytesList(
+        newMediaBytesList,
+        newMediaFilenames ?? List.generate(newMediaBytesList.length, (i) => 'media_$i.jpg'),
+      );
+      mediaUrls.addAll(uploaded);
+    } else if (newMediaFiles != null && newMediaFiles.isNotEmpty) {
+      final uploaded = await ApiService.uploadMediaFiles(newMediaFiles);
+      mediaUrls.addAll(uploaded);
     }
 
     final result = await ApiService.editStory(
       id: id,
       title: title,
       story: story,
-      imageUrls: imageUrls,
+      mediaUrls: mediaUrls,
       visitedLocation: visitedLocation,
       visitedDate: visitedDate,
     );

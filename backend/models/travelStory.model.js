@@ -27,8 +27,8 @@ const travelStorySchema = new mongoose.Schema({
     required: true,
    },
 
-   // imageUrl → imageUrls (array)
-   imageUrls: {
+   // image এবং video দুইটাই এখানে থাকবে
+   mediaUrls: {
     type: [String],
     default: [],
    },

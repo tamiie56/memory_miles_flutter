@@ -3,25 +3,90 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
 import '../../models/travel_story.dart';
 import '../../providers/story_provider.dart';
 import '../../utils/theme.dart';
 import 'add_edit_story_screen.dart';
 
-class ViewStoryScreen extends StatelessWidget {
+class ViewStoryScreen extends StatefulWidget {
   final TravelStory story;
 
   const ViewStoryScreen({super.key, required this.story});
 
   @override
+  State<ViewStoryScreen> createState() => _ViewStoryScreenState();
+}
+
+class _ViewStoryScreenState extends State<ViewStoryScreen> {
+  int _currentMediaIndex = 0;
+  VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
+
+  @override
+  void initState() {
+    super.initState();
+    _initMediaForIndex(0);
+  }
+
+  @override
+  void dispose() {
+    _disposeVideo();
+    super.dispose();
+  }
+
+  void _disposeVideo() {
+    _chewieController?.dispose();
+    _videoController?.dispose();
+    _chewieController = null;
+    _videoController = null;
+  }
+
+  bool _isVideo(String url) {
+    final lower = url.toLowerCase();
+    return lower.contains('/video/') ||
+        lower.endsWith('.mp4') ||
+        lower.endsWith('.mov') ||
+        lower.endsWith('.avi');
+  }
+
+  Future<void> _initMediaForIndex(int index) async {
+    if (index >= widget.story.mediaUrls.length) return;
+    final url = widget.story.mediaUrls[index];
+
+    if (_isVideo(url)) {
+      _disposeVideo();
+      final controller =
+      VideoPlayerController.networkUrl(Uri.parse(url));
+      await controller.initialize();
+      final chewie = ChewieController(
+        videoPlayerController: controller,
+        autoPlay: false,
+        looping: false,
+        aspectRatio: controller.value.aspectRatio,
+      );
+      if (mounted) {
+        setState(() {
+          _videoController = controller;
+          _chewieController = chewie;
+        });
+      }
+    } else {
+      _disposeVideo();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final media = widget.story.mediaUrls;
+
     return Scaffold(
       backgroundColor: AppTheme.white,
       body: CustomScrollView(
         slivers: [
-          // Hero image app bar
           SliverAppBar(
-            expandedHeight: 280,
+            expandedHeight: 300,
             pinned: true,
             backgroundColor: AppTheme.white,
             leading: GestureDetector(
@@ -32,8 +97,8 @@ class ViewStoryScreen extends StatelessWidget {
                   color: Colors.white.withOpacity(0.85),
                   shape: BoxShape.circle,
                 ),
-                child:
-                const Icon(Icons.arrow_back, color: AppTheme.textDark),
+                child: const Icon(Icons.arrow_back,
+                    color: AppTheme.textDark),
               ),
             ),
             actions: [
@@ -41,7 +106,8 @@ class ViewStoryScreen extends StatelessWidget {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => AddEditStoryScreen(story: story)),
+                      builder: (_) =>
+                          AddEditStoryScreen(story: widget.story)),
                 ),
                 child: Container(
                   margin: const EdgeInsets.all(8),
@@ -66,8 +132,8 @@ class ViewStoryScreen extends StatelessWidget {
               GestureDetector(
                 onTap: () => _confirmDelete(context),
                 child: Container(
-                  margin:
-                  const EdgeInsets.only(right: 8, top: 8, bottom: 8),
+                  margin: const EdgeInsets.only(
+                      right: 8, top: 8, bottom: 8),
                   padding: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
@@ -88,24 +154,13 @@ class ViewStoryScreen extends StatelessWidget {
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              background: story.imageUrls.isNotEmpty
-                  ? PageView.builder(
-                itemCount: story.imageUrls.length,
-                itemBuilder: (context, index) => Image.network(
-                  story.imageUrls[index],
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: AppTheme.primaryLight,
-                    child: const Icon(Icons.image_outlined,
-                        color: AppTheme.primary, size: 60),
-                  ),
-                ),
-              )
-                  : Container(
+              background: media.isEmpty
+                  ? Container(
                 color: AppTheme.primaryLight,
                 child: const Icon(Icons.image_outlined,
                     color: AppTheme.primary, size: 60),
-              ),
+              )
+                  : _buildMediaViewer(media),
             ),
           ),
 
@@ -115,26 +170,32 @@ class ViewStoryScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Image count indicator
-                  if (story.imageUrls.length > 1)
+                  // Media dots indicator
+                  if (media.length > 1)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Row(
-                        children: [
-                          const Icon(Icons.photo_library,
-                              size: 14, color: AppTheme.textMid),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${story.imageUrls.length} photos — swipe to view',
-                            style: const TextStyle(
-                                fontSize: 12, color: AppTheme.textMid),
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          media.length,
+                              (i) => Container(
+                            width: i == _currentMediaIndex ? 16 : 8,
+                            height: 8,
+                            margin:
+                            const EdgeInsets.symmetric(horizontal: 3),
+                            decoration: BoxDecoration(
+                              color: i == _currentMediaIndex
+                                  ? AppTheme.primary
+                                  : Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
 
                   Text(
-                    story.title,
+                    widget.story.title,
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -147,12 +208,13 @@ class ViewStoryScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        DateFormat('dd MMM yyyy').format(story.visitedDate),
+                        DateFormat('dd MMM yyyy')
+                            .format(widget.story.visitedDate),
                         style: const TextStyle(
                             fontSize: 13, color: AppTheme.textMid),
                       ),
                       const Spacer(),
-                      if (story.visitedLocation.isNotEmpty)
+                      if (widget.story.visitedLocation.isNotEmpty)
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 5),
@@ -167,9 +229,10 @@ class ViewStoryScreen extends StatelessWidget {
                                   size: 13, color: AppTheme.primary),
                               const SizedBox(width: 4),
                               Text(
-                                story.visitedLocation.join(', '),
+                                widget.story.visitedLocation.join(', '),
                                 style: const TextStyle(
-                                    fontSize: 12, color: AppTheme.primary),
+                                    fontSize: 12,
+                                    color: AppTheme.primary),
                               ),
                             ],
                           ),
@@ -181,7 +244,7 @@ class ViewStoryScreen extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   Text(
-                    story.story,
+                    widget.story.story,
                     style: const TextStyle(
                       fontSize: 15,
                       color: AppTheme.textDark,
@@ -196,6 +259,38 @@ class ViewStoryScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMediaViewer(List<String> media) {
+    return PageView.builder(
+      itemCount: media.length,
+      onPageChanged: (index) {
+        setState(() => _currentMediaIndex = index);
+        _initMediaForIndex(index);
+      },
+      itemBuilder: (context, index) {
+        final url = media[index];
+        if (_isVideo(url)) {
+          if (index == _currentMediaIndex &&
+              _chewieController != null) {
+            return Chewie(controller: _chewieController!);
+          }
+          return Container(
+            color: Colors.black,
+            child: const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
+          );
+        }
+        return Image.network(url,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              color: AppTheme.primaryLight,
+              child: const Icon(Icons.image_outlined,
+                  color: AppTheme.primary, size: 60),
+            ));
+      },
     );
   }
 
@@ -223,7 +318,7 @@ class ViewStoryScreen extends StatelessWidget {
 
     if (confirm == true && context.mounted) {
       final success =
-      await context.read<StoryProvider>().deleteStory(story.id);
+      await context.read<StoryProvider>().deleteStory(widget.story.id);
       if (context.mounted) {
         if (success) {
           Navigator.pop(context);

@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import '../../models/travel_story.dart';
 import '../../providers/story_provider.dart';
@@ -27,9 +28,14 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
   DateTime _visitedDate = DateTime.now();
   List<String> _locations = [];
 
-  List<File> _imageFiles = [];
-  List<Uint8List> _imageBytesList = [];
-  List<String> _existingImageUrls = [];
+  // existing media (edit mode)
+  List<String> _existingMediaUrls = [];
+
+  // new media to upload
+  List<File> _newMediaFiles = [];
+  List<Uint8List> _newMediaBytes = [];
+  List<String> _newMediaFilenames = [];
+  List<bool> _newMediaIsVideo = []; // track which are videos
 
   bool _loading = false;
   String? _error;
@@ -44,7 +50,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
       _storyCtrl.text = widget.story!.story;
       _visitedDate = widget.story!.visitedDate;
       _locations = List.from(widget.story!.visitedLocation);
-      _existingImageUrls = List.from(widget.story!.imageUrls);
+      _existingMediaUrls = List.from(widget.story!.mediaUrls);
     }
   }
 
@@ -56,6 +62,54 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
     super.dispose();
   }
 
+  Future<void> _pickMedia() async {
+    // Show bottom sheet to choose image or video
+    await showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.photo_library,
+                  color: AppTheme.primary),
+              title: const Text('Add Images'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImages();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.videocam,
+                  color: AppTheme.primary),
+              title: const Text('Add Video'),
+              subtitle: const Text('Max 30 seconds recommended',
+                  style: TextStyle(fontSize: 11)),
+              onTap: () {
+                Navigator.pop(context);
+                _pickVideo();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickImages() async {
     final picker = ImagePicker();
     final picked = await picker.pickMultiImage(imageQuality: 80);
@@ -63,11 +117,49 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
       if (kIsWeb) {
         for (final xfile in picked) {
           final bytes = await xfile.readAsBytes();
-          setState(() => _imageBytesList.add(bytes));
+          setState(() {
+            _newMediaBytes.add(bytes);
+            _newMediaFilenames.add(xfile.name);
+            _newMediaIsVideo.add(false);
+          });
         }
       } else {
         setState(() {
-          _imageFiles.addAll(picked.map((x) => File(x.path)));
+          for (final xfile in picked) {
+            _newMediaFiles.add(File(xfile.path));
+            _newMediaIsVideo.add(false);
+          }
+        });
+      }
+    }
+  }
+
+  Future<void> _pickVideo() async {
+    if (kIsWeb) {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.video,
+        allowMultiple: false,
+      );
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        if (file.bytes != null) {
+          setState(() {
+            _newMediaBytes.add(file.bytes!);
+            _newMediaFilenames.add(file.name);
+            _newMediaIsVideo.add(true);
+          });
+        }
+      }
+    } else {
+      final picker = ImagePicker();
+      final picked = await picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(seconds: 60),
+      );
+      if (picked != null) {
+        setState(() {
+          _newMediaFiles.add(File(picked.path));
+          _newMediaIsVideo.add(true);
         });
       }
     }
@@ -121,11 +213,12 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
         id: widget.story!.id,
         title: _titleCtrl.text.trim(),
         story: _storyCtrl.text.trim(),
-        currentImageUrls: _existingImageUrls,
+        currentMediaUrls: _existingMediaUrls,
         visitedLocation: _locations,
         visitedDate: _visitedDate,
-        newImageFiles: _imageFiles.isNotEmpty ? _imageFiles : null,
-        newImageBytesList: _imageBytesList.isNotEmpty ? _imageBytesList : null,
+        newMediaFiles: _newMediaFiles.isNotEmpty ? _newMediaFiles : null,
+        newMediaBytesList: _newMediaBytes.isNotEmpty ? _newMediaBytes : null,
+        newMediaFilenames: _newMediaFilenames.isNotEmpty ? _newMediaFilenames : null,
       );
     } else {
       success = await provider.addStory(
@@ -133,8 +226,9 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
         story: _storyCtrl.text.trim(),
         visitedLocation: _locations,
         visitedDate: _visitedDate,
-        imageFiles: _imageFiles.isNotEmpty ? _imageFiles : null,
-        imageBytesList: _imageBytesList.isNotEmpty ? _imageBytesList : null,
+        mediaFiles: _newMediaFiles.isNotEmpty ? _newMediaFiles : null,
+        mediaBytesList: _newMediaBytes.isNotEmpty ? _newMediaBytes : null,
+        mediaFilenames: _newMediaFilenames.isNotEmpty ? _newMediaFilenames : null,
       );
     }
 
@@ -152,9 +246,17 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
     }
   }
 
-  int get _totalImages =>
-      _existingImageUrls.length +
-          (kIsWeb ? _imageBytesList.length : _imageFiles.length);
+  int get _totalMedia =>
+      _existingMediaUrls.length +
+          (kIsWeb ? _newMediaBytes.length : _newMediaFiles.length);
+
+  bool _isVideoUrl(String url) {
+    final lower = url.toLowerCase();
+    return lower.contains('/video/') ||
+        lower.endsWith('.mp4') ||
+        lower.endsWith('.mov') ||
+        lower.endsWith('.avi');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -176,7 +278,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                 : Text(
               isEdit ? 'UPDATE' : 'ADD',
               style: const TextStyle(
-                  color: AppTheme.primary, fontWeight: FontWeight.bold),
+                  color: AppTheme.primary,
+                  fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -248,11 +351,11 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Images section
-            _label('IMAGES ($_totalImages selected)'),
+            // Media section
+            _label('PHOTOS & VIDEOS ($_totalMedia selected)'),
             const SizedBox(height: 8),
 
-            if (_totalImages > 0) ...[
+            if (_totalMedia > 0) ...[
               GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -262,20 +365,20 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                   crossAxisSpacing: 8,
                   mainAxisSpacing: 8,
                 ),
-                itemCount: _totalImages,
+                itemCount: _totalMedia,
                 itemBuilder: (context, index) {
                   return Stack(
                     fit: StackFit.expand,
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: _buildImagePreview(index),
+                        child: _buildMediaPreview(index),
                       ),
                       Positioned(
                         top: 4,
                         right: 4,
                         child: GestureDetector(
-                          onTap: () => _removeImage(index),
+                          onTap: () => _removeMedia(index),
                           child: Container(
                             padding: const EdgeInsets.all(3),
                             decoration: const BoxDecoration(
@@ -293,7 +396,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
               ),
               const SizedBox(height: 8),
               GestureDetector(
-                onTap: _pickImages,
+                onTap: _pickMedia,
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
@@ -308,7 +411,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                       Icon(Icons.add_photo_alternate_outlined,
                           color: AppTheme.primary, size: 18),
                       SizedBox(width: 6),
-                      Text('Add More Images',
+                      Text('Add More Photos/Videos',
                           style: TextStyle(
                               color: AppTheme.primary, fontSize: 13)),
                     ],
@@ -317,7 +420,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
               ),
             ] else
               GestureDetector(
-                onTap: _pickImages,
+                onTap: _pickMedia,
                 child: Container(
                   height: 120,
                   width: double.infinity,
@@ -333,7 +436,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                       Icon(Icons.add_photo_alternate_outlined,
                           color: AppTheme.primary, size: 36),
                       SizedBox(height: 8),
-                      Text('Tap to add images',
+                      Text('Tap to add photos or videos',
                           style: TextStyle(
                               color: AppTheme.primary, fontSize: 13)),
                     ],
@@ -415,29 +518,74 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
     );
   }
 
-  Widget _buildImagePreview(int index) {
-    if (index < _existingImageUrls.length) {
-      return Image.network(_existingImageUrls[index], fit: BoxFit.cover);
+  Widget _buildMediaPreview(int index) {
+    // Existing media
+    if (index < _existingMediaUrls.length) {
+      final url = _existingMediaUrls[index];
+      if (_isVideoUrl(url)) {
+        return Container(
+          color: Colors.black87,
+          child: const Center(
+            child: Icon(Icons.play_circle_fill,
+                color: Colors.white, size: 36),
+          ),
+        );
+      }
+      return Image.network(url, fit: BoxFit.cover);
     }
-    final newIndex = index - _existingImageUrls.length;
+
+    // New media
+    final newIndex = index - _existingMediaUrls.length;
     if (kIsWeb) {
-      return Image.memory(_imageBytesList[newIndex], fit: BoxFit.cover);
+      final isVideo = newIndex < _newMediaIsVideo.length
+          ? _newMediaIsVideo[newIndex]
+          : false;
+      if (isVideo) {
+        return Container(
+          color: Colors.black87,
+          child: const Center(
+            child: Icon(Icons.play_circle_fill,
+                color: Colors.white, size: 36),
+          ),
+        );
+      }
+      return Image.memory(_newMediaBytes[newIndex], fit: BoxFit.cover);
     } else {
-      return Image.file(_imageFiles[newIndex], fit: BoxFit.cover);
+      final isVideo = newIndex < _newMediaIsVideo.length
+          ? _newMediaIsVideo[newIndex]
+          : false;
+      if (isVideo) {
+        return Container(
+          color: Colors.black87,
+          child: const Center(
+            child: Icon(Icons.play_circle_fill,
+                color: Colors.white, size: 36),
+          ),
+        );
+      }
+      return Image.file(_newMediaFiles[newIndex], fit: BoxFit.cover);
     }
   }
 
-  void _removeImage(int index) {
+  void _removeMedia(int index) {
     setState(() {
-      if (index < _existingImageUrls.length) {
-        _existingImageUrls.removeAt(index);
+      if (index < _existingMediaUrls.length) {
+        _existingMediaUrls.removeAt(index);
       } else {
-        final newIndex = index - _existingImageUrls.length;
+        final newIndex = index - _existingMediaUrls.length;
         if (kIsWeb) {
-          _imageBytesList.removeAt(newIndex);
+          _newMediaBytes.removeAt(newIndex);
+          if (newIndex < _newMediaFilenames.length) {
+            _newMediaFilenames.removeAt(newIndex);
+          }
+          if (newIndex < _newMediaIsVideo.length) {
+            _newMediaIsVideo.removeAt(newIndex);
+          }
         } else {
-
-          _imageFiles.removeAt(newIndex);
+          _newMediaFiles.removeAt(newIndex);
+          if (newIndex < _newMediaIsVideo.length) {
+            _newMediaIsVideo.removeAt(newIndex);
+          }
         }
       }
     });

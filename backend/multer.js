@@ -14,29 +14,27 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: async (req, file) => {
-        const isVideo = file.mimetype.startsWith("video/")
+        const isVideo = file.mimetype.startsWith("video/") ||
+            file.originalname.match(/\.(mp4|mov|avi|mkv)$/i)
+
         return {
             folder: "memory_miles",
             resource_type: isVideo ? "video" : "image",
-            allowed_formats: ["jpg", "jpeg", "png", "gif", "webp", "mp4", "mov", "avi"],
+            allowed_formats: isVideo
+                ? ["mp4", "mov", "avi", "mkv"]
+                : ["jpg", "jpeg", "png", "gif", "webp"],
         }
     },
 })
 
 const fileFilter = (req, file, cb) => {
-    const allowedMimes = [
-        "image/jpeg", "image/png", "image/gif", "image/webp",
-        "video/mp4", "video/quicktime", "video/avi",
-        "application/octet-stream"
-    ]
-    const allowedExtensions = /\.(jpg|jpeg|png|gif|webp|mp4|mov|avi)$/i
+    const isImage = file.mimetype.startsWith("image/")
+    const isVideo = file.mimetype.startsWith("video/")
+    const isOctet = file.mimetype === "application/octet-stream"
+    const hasVideoExt = /\.(mp4|mov|avi|mkv)$/i.test(file.originalname)
+    const hasImageExt = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.originalname)
 
-    if (
-        file.mimetype.startsWith("image/") ||
-        file.mimetype.startsWith("video/") ||
-        allowedMimes.includes(file.mimetype) ||
-        allowedExtensions.test(file.originalname)
-    ) {
+    if (isImage || isVideo || (isOctet && (hasVideoExt || hasImageExt))) {
         cb(null, true)
     } else {
         cb(new Error("Only image and video files are allowed"), false)
