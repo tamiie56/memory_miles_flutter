@@ -7,7 +7,7 @@ class TravelStory {
   final List<String> visitedLocation;
   final bool isFavorite;
   final String userId;
-  final List<String> imageUrls;
+  final List<String> mediaUrls;
   final DateTime visitedDate;
   final DateTime createdAt;
 
@@ -18,7 +18,7 @@ class TravelStory {
     required this.visitedLocation,
     required this.isFavorite,
     required this.userId,
-    required this.imageUrls,
+    required this.mediaUrls,
     required this.visitedDate,
     required this.createdAt,
   });
@@ -31,7 +31,7 @@ class TravelStory {
       visitedLocation: List<String>.from(json['visitedLocation'] ?? []),
       isFavorite: json['isFavorite'] ?? false,
       userId: json['userId'] ?? '',
-      imageUrls: List<String>.from(json['imageUrls'] ?? []),
+      mediaUrls: List<String>.from(json['mediaUrls'] ?? []),
       visitedDate: json['visitedDate'] != null
           ? DateTime.parse(json['visitedDate'])
           : DateTime.now(),
@@ -41,6 +41,24 @@ class TravelStory {
     );
   }
 
+  // URL টা video কিনা check করার helper
+  bool isVideo(String url) {
+    final lower = url.toLowerCase();
+    return lower.contains('/video/') ||
+        lower.endsWith('.mp4') ||
+        lower.endsWith('.mov') ||
+        lower.endsWith('.avi');
+  }
+
+  List<String> get imageOnlyUrls =>
+      mediaUrls.where((url) => !isVideo(url)).toList();
+
+  List<String> get videoOnlyUrls =>
+      mediaUrls.where((url) => isVideo(url)).toList();
+
+  String? get firstImageUrl =>
+      imageOnlyUrls.isNotEmpty ? imageOnlyUrls.first : null;
+
   TravelStory copyWith({bool? isFavorite}) {
     return TravelStory(
       id: id,
@@ -49,7 +67,7 @@ class TravelStory {
       visitedLocation: visitedLocation,
       isFavorite: isFavorite ?? this.isFavorite,
       userId: userId,
-      imageUrls: imageUrls,
+      mediaUrls: mediaUrls,
       visitedDate: visitedDate,
       createdAt: createdAt,
     );

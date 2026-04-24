@@ -135,7 +135,7 @@ class ApiService {
   static Future<Map<String, dynamic>> addStory({
     required String title,
     required String story,
-    required List<String> imageUrls,
+    required List<String> mediaUrls,
     required List<String> visitedLocation,
     required DateTime visitedDate,
   }) async {
@@ -146,7 +146,7 @@ class ApiService {
       body: jsonEncode({
         'title': title,
         'story': story,
-        'imageUrls': imageUrls,
+        'mediaUrls': mediaUrls,
         'visitedLocation': visitedLocation,
         'visitedDate': visitedDate.millisecondsSinceEpoch.toString(),
       }),
@@ -162,7 +162,7 @@ class ApiService {
     required String id,
     required String title,
     required String story,
-    required List<String> imageUrls,
+    required List<String> mediaUrls,
     required List<String> visitedLocation,
     required DateTime visitedDate,
   }) async {
@@ -173,7 +173,7 @@ class ApiService {
       body: jsonEncode({
         'title': title,
         'story': story,
-        'imageUrls': imageUrls,
+        'mediaUrls': mediaUrls,
         'visitedLocation': visitedLocation,
         'visitedDate': visitedDate.millisecondsSinceEpoch.toString(),
       }),
@@ -218,9 +218,9 @@ class ApiService {
     return [];
   }
 
-  // ─── Image Upload (multiple) ──────────────────────────────────────
+  // ─── Media Upload ─────────────────────────────────────────────────
 
-  static Future<List<String>> uploadImages(List<File> imageFiles) async {
+  static Future<List<String>> uploadMediaFiles(List<File> files) async {
     final token = await getToken();
     final request = http.MultipartRequest(
       'POST',
@@ -229,20 +229,20 @@ class ApiService {
     if (token != null) {
       request.headers['Authorization'] = 'Bearer $token';
     }
-    for (final file in imageFiles) {
+    for (final file in files) {
       request.files.add(await http.MultipartFile.fromPath('images', file.path));
     }
     final response = await request.send();
     final respStr = await response.stream.bytesToString();
     if (response.statusCode == 201) {
       final data = jsonDecode(respStr);
-      return List<String>.from(data['imageUrls']);
+      return List<String>.from(data['mediaUrls']);
     }
     return [];
   }
 
-  static Future<List<String>> uploadImageBytesList(
-      List<Uint8List> bytesList) async {
+  static Future<List<String>> uploadMediaBytesList(
+      List<Uint8List> bytesList, List<String> filenames) async {
     final token = await getToken();
     final request = http.MultipartRequest(
       'POST',
@@ -255,14 +255,14 @@ class ApiService {
       request.files.add(http.MultipartFile.fromBytes(
         'images',
         bytesList[i],
-        filename: 'image_$i.jpg',
+        filename: filenames[i],
       ));
     }
     final response = await request.send();
     final respStr = await response.stream.bytesToString();
     if (response.statusCode == 201) {
       final data = jsonDecode(respStr);
-      return List<String>.from(data['imageUrls']);
+      return List<String>.from(data['mediaUrls']);
     }
     return [];
   }
