@@ -2,6 +2,7 @@
 
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -23,10 +24,15 @@ class AddEditStoryScreen extends StatefulWidget {
 class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
   final _titleCtrl = TextEditingController();
   final _storyCtrl = TextEditingController();
-  final _locationCtrl = TextEditingController();
+  final _locationSearchCtrl = TextEditingController();
 
   DateTime _visitedDate = DateTime.now();
   List<String> _locations = [];
+
+  // Location search
+  List<Map<String, dynamic>> _locationSuggestions = [];
+  bool _searchingLocation = false;
+  final Dio _dio = Dio();
 
   // existing media (edit mode)
   List<String> _existingMediaUrls = [];
@@ -35,7 +41,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
   List<File> _newMediaFiles = [];
   List<Uint8List> _newMediaBytes = [];
   List<String> _newMediaFilenames = [];
-  List<bool> _newMediaIsVideo = []; // track which are videos
+  List<bool> _newMediaIsVideo = [];
 
   bool _loading = false;
   String? _error;
@@ -58,12 +64,96 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
   void dispose() {
     _titleCtrl.dispose();
     _storyCtrl.dispose();
-    _locationCtrl.dispose();
+    _locationSearchCtrl.dispose();
+    _dio.close();
     super.dispose();
   }
 
+  // ─── Location Search (OpenStreetMap Nominatim) ───────────────────
+
+  Future<void> _searchLocation(String query) async {
+    if (query.trim().length < 2) {
+      setState(() => _locationSuggestions = []);
+      return;
+    }
+
+    setState(() => _searchingLocation = true);
+
+    try {
+      final response = await _dio.get(
+        'https://nominatim.openstreetmap.org/search',
+        queryParameters: {
+          'q': query,
+          'format': 'json',
+          'limit': 5,
+          'addressdetails': 1,
+        },
+        options: Options(headers: {
+          'User-Agent': 'MemoryMilesApp/1.0',
+        }),
+      );
+
+      final List results = response.data;
+      setState(() {
+        _locationSuggestions = results.map((r) {
+          final address = r['address'] ?? {};
+          final city = address['city'] ??
+              address['town'] ??
+              address['village'] ??
+              address['county'] ??
+              '';
+          final country = address['country'] ?? '';
+          final displayName = r['display_name'] ?? '';
+
+          // Short name: City, Country
+          String shortName = '';
+          if (city.isNotEmpty && country.isNotEmpty) {
+            shortName = '$city, $country';
+          } else {
+            // fallback: first 2 parts of display_name
+            final parts = displayName.split(', ');
+            shortName = parts.take(2).join(', ');
+          }
+
+          return {
+            'short': shortName,
+            'full': displayName,
+          };
+        }).toList();
+        _searchingLocation = false;
+      });
+    } catch (e) {
+      setState(() {
+        _locationSuggestions = [];
+        _searchingLocation = false;
+      });
+    }
+  }
+
+  void _addLocationFromSuggestion(String location) {
+    if (location.isNotEmpty && !_locations.contains(location)) {
+      setState(() {
+        _locations.add(location);
+        _locationSearchCtrl.clear();
+        _locationSuggestions = [];
+      });
+    }
+  }
+
+  void _addLocationManually() {
+    final loc = _locationSearchCtrl.text.trim();
+    if (loc.isNotEmpty && !_locations.contains(loc)) {
+      setState(() {
+        _locations.add(loc);
+        _locationSearchCtrl.clear();
+        _locationSuggestions = [];
+      });
+    }
+  }
+
+  // ─── Media ───────────────────────────────────────────────────────
+
   Future<void> _pickMedia() async {
-    // Show bottom sheet to choose image or video
     await showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -84,8 +174,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
             ),
             const SizedBox(height: 16),
             ListTile(
-              leading: const Icon(Icons.photo_library,
-                  color: AppTheme.primary),
+              leading: const Icon(Icons.photo_library, color: AppTheme.primary),
               title: const Text('Add Images'),
               onTap: () {
                 Navigator.pop(context);
@@ -93,8 +182,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.videocam,
-                  color: AppTheme.primary),
+              leading: const Icon(Icons.videocam, color: AppTheme.primary),
               title: const Text('Add Video'),
               subtitle: const Text('Max 30 seconds recommended',
                   style: TextStyle(fontSize: 11)),
@@ -165,6 +253,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
     }
   }
 
+  // ─── Date ────────────────────────────────────────────────────────
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -181,15 +271,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
     if (picked != null) setState(() => _visitedDate = picked);
   }
 
-  void _addLocation() {
-    final loc = _locationCtrl.text.trim();
-    if (loc.isNotEmpty && !_locations.contains(loc)) {
-      setState(() {
-        _locations.add(loc);
-        _locationCtrl.clear();
-      });
-    }
-  }
+  // ─── Submit ──────────────────────────────────────────────────────
 
   Future<void> _handleSubmit() async {
     if (_titleCtrl.text.trim().isEmpty) {
@@ -258,6 +340,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
         lower.endsWith('.avi');
   }
 
+  // ─── Build ───────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -284,242 +368,311 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_error != null)
-              Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(_error!,
-                    style: const TextStyle(
-                        color: AppTheme.danger, fontSize: 13)),
-              ),
-
-            _label('TITLE'),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _titleCtrl,
-              style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark),
-              decoration: const InputDecoration(
-                hintText: 'Once Upon A Time...',
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                filled: false,
-              ),
-            ),
-            const Divider(),
-            const SizedBox(height: 16),
-
-            // Date picker
-            GestureDetector(
-              onTap: _pickDate,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryLight,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.calendar_today,
-                        color: AppTheme.primary, size: 18),
-                    const SizedBox(width: 10),
-                    Text(
-                      '${_visitedDate.day} ${_monthName(_visitedDate.month)} ${_visitedDate.year}',
-                      style: const TextStyle(
-                          color: AppTheme.primary,
-                          fontWeight: FontWeight.w500),
-                    ),
-                    const Spacer(),
-                    const Icon(Icons.edit,
-                        color: AppTheme.primary, size: 16),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Media section
-            _label('PHOTOS & VIDEOS ($_totalMedia selected)'),
-            const SizedBox(height: 8),
-
-            if (_totalMedia > 0) ...[
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                ),
-                itemCount: _totalMedia,
-                itemBuilder: (context, index) {
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: _buildMediaPreview(index),
-                      ),
-                      Positioned(
-                        top: 4,
-                        right: 4,
-                        child: GestureDetector(
-                          onTap: () => _removeMedia(index),
-                          child: Container(
-                            padding: const EdgeInsets.all(3),
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.close,
-                                color: Colors.white, size: 14),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: _pickMedia,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+      body: GestureDetector(
+        onTap: () => setState(() => _locationSuggestions = []),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_error != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    border: Border.all(
-                        color: AppTheme.primary.withOpacity(0.3)),
+                    color: Colors.red.shade50,
                     borderRadius: BorderRadius.circular(8),
-                    color: AppTheme.primaryLight,
                   ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.add_photo_alternate_outlined,
-                          color: AppTheme.primary, size: 18),
-                      SizedBox(width: 6),
-                      Text('Add More Photos/Videos',
-                          style: TextStyle(
-                              color: AppTheme.primary, fontSize: 13)),
-                    ],
-                  ),
+                  child: Text(_error!,
+                      style: const TextStyle(
+                          color: AppTheme.danger, fontSize: 13)),
                 ),
-              ),
-            ] else
-              GestureDetector(
-                onTap: _pickMedia,
-                child: Container(
-                  height: 120,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryLight,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: AppTheme.primary.withOpacity(0.3)),
-                  ),
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.add_photo_alternate_outlined,
-                          color: AppTheme.primary, size: 36),
-                      SizedBox(height: 8),
-                      Text('Tap to add photos or videos',
-                          style: TextStyle(
-                              color: AppTheme.primary, fontSize: 13)),
-                    ],
-                  ),
-                ),
-              ),
-            const SizedBox(height: 20),
 
-            // Story
-            _label('STORY'),
-            const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: TextField(
-                controller: _storyCtrl,
-                maxLines: 10,
+              // Title
+              _label('TITLE'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _titleCtrl,
+                style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textDark),
                 decoration: const InputDecoration(
-                  hintText: 'Your Story...',
-                  contentPadding: EdgeInsets.all(16),
+                  hintText: 'Once Upon A Time...',
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
                   filled: false,
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
+              const Divider(),
+              const SizedBox(height: 16),
 
-            // Visited locations
-            _label('VISITED LOCATIONS'),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _locationCtrl,
-                    decoration: const InputDecoration(
-                      hintText: 'Add a location',
-                      prefixIcon: Icon(Icons.location_on_outlined),
+              // Date picker
+              GestureDetector(
+                onTap: _pickDate,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryLight,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today,
+                          color: AppTheme.primary, size: 18),
+                      const SizedBox(width: 10),
+                      Text(
+                        '${_visitedDate.day} ${_monthName(_visitedDate.month)} ${_visitedDate.year}',
+                        style: const TextStyle(
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.w500),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.edit,
+                          color: AppTheme.primary, size: 16),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Media section
+              _label('PHOTOS & VIDEOS ($_totalMedia selected)'),
+              const SizedBox(height: 8),
+
+              if (_totalMedia > 0) ...[
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                  ),
+                  itemCount: _totalMedia,
+                  itemBuilder: (context, index) {
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: _buildMediaPreview(index),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: GestureDetector(
+                            onTap: () => _removeMedia(index),
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close,
+                                  color: Colors.white, size: 14),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: _pickMedia,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                          color: AppTheme.primary.withOpacity(0.3)),
+                      borderRadius: BorderRadius.circular(8),
+                      color: AppTheme.primaryLight,
                     ),
-                    onSubmitted: (_) => _addLocation(),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_photo_alternate_outlined,
+                            color: AppTheme.primary, size: 18),
+                        SizedBox(width: 6),
+                        Text('Add More Photos/Videos',
+                            style: TextStyle(
+                                color: AppTheme.primary, fontSize: 13)),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _addLocation,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(50, 50),
-                    padding: EdgeInsets.zero,
+              ] else
+                GestureDetector(
+                  onTap: _pickMedia,
+                  child: Container(
+                    height: 120,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryLight,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: AppTheme.primary.withOpacity(0.3)),
+                    ),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_photo_alternate_outlined,
+                            color: AppTheme.primary, size: 36),
+                        SizedBox(height: 8),
+                        Text('Tap to add photos or videos',
+                            style: TextStyle(
+                                color: AppTheme.primary, fontSize: 13)),
+                      ],
+                    ),
                   ),
-                  child: const Icon(Icons.add),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _locations
-                  .map((loc) => Chip(
-                label: Text(loc),
-                backgroundColor: AppTheme.primaryLight,
-                labelStyle:
-                const TextStyle(color: AppTheme.primary),
-                deleteIcon: const Icon(Icons.close,
-                    size: 16, color: AppTheme.primary),
-                onDeleted: () =>
-                    setState(() => _locations.remove(loc)),
-              ))
-                  .toList(),
-            ),
-            const SizedBox(height: 40),
-          ],
+              const SizedBox(height: 20),
+
+              // Story
+              _label('STORY'),
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: TextField(
+                  controller: _storyCtrl,
+                  maxLines: 10,
+                  decoration: const InputDecoration(
+                    hintText: 'Your Story...',
+                    contentPadding: EdgeInsets.all(16),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Visited Locations with Search
+              _label('VISITED LOCATIONS'),
+              const SizedBox(height: 8),
+
+              // Search field
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _locationSearchCtrl,
+                      decoration: InputDecoration(
+                        hintText: 'Search a location...',
+                        prefixIcon: const Icon(
+                            Icons.location_on_outlined),
+                        suffixIcon: _searchingLocation
+                            ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppTheme.primary),
+                          ),
+                        )
+                            : null,
+                      ),
+                      onChanged: (val) => _searchLocation(val),
+                      onSubmitted: (_) => _addLocationManually(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _addLocationManually,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(50, 50),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: const Icon(Icons.add),
+                  ),
+                ],
+              ),
+
+              // Suggestions dropdown
+              if (_locationSuggestions.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.only(top: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.white,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _locationSuggestions.length,
+                    separatorBuilder: (_, __) =>
+                    const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final suggestion = _locationSuggestions[index];
+                      return ListTile(
+                        leading: const Icon(Icons.location_on,
+                            color: AppTheme.primary, size: 20),
+                        title: Text(
+                          suggestion['short'] ?? '',
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500),
+                        ),
+                        subtitle: Text(
+                          suggestion['full'] ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textMid),
+                        ),
+                        onTap: () => _addLocationFromSuggestion(
+                            suggestion['short'] ?? ''),
+                      );
+                    },
+                  ),
+                ),
+
+              const SizedBox(height: 12),
+
+              // Added location chips
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _locations
+                    .map((loc) => Chip(
+                  label: Text(loc),
+                  backgroundColor: AppTheme.primaryLight,
+                  labelStyle:
+                  const TextStyle(color: AppTheme.primary),
+                  deleteIcon: const Icon(Icons.close,
+                      size: 16, color: AppTheme.primary),
+                  onDeleted: () =>
+                      setState(() => _locations.remove(loc)),
+                ))
+                    .toList(),
+              ),
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildMediaPreview(int index) {
-    // Existing media
     if (index < _existingMediaUrls.length) {
       final url = _existingMediaUrls[index];
       if (_isVideoUrl(url)) {
@@ -534,7 +687,6 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
       return Image.network(url, fit: BoxFit.cover);
     }
 
-    // New media
     final newIndex = index - _existingMediaUrls.length;
     if (kIsWeb) {
       final isVideo = newIndex < _newMediaIsVideo.length
