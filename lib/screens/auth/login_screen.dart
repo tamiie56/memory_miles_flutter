@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/theme.dart';
 import 'signup_screen.dart';
+import 'forgot_password_screen.dart'; // ✅ নতুন import
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -159,24 +160,43 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
 
+                    // ✅ নতুন — Forgot Password link
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ForgotPasswordScreen()),
+                        ),
+                        child: const Text(
+                          'Forgot Password?',
+                          style: TextStyle(
+                            color: AppTheme.primary,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+
                     if (_error != null) ...[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       Text(_error!,
                           style: const TextStyle(color: AppTheme.danger, fontSize: 12)),
                     ],
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     // Login button
                     ElevatedButton(
                       onPressed: auth.loading ? null : _handleLogin,
                       child: auth.loading
                           ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2),
-                            )
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2),
+                      )
                           : const Text('LOGIN'),
                     ),
 
