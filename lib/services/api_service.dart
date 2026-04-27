@@ -102,6 +102,40 @@ class ApiService {
     await clearToken();
   }
 
+  // ✅ নতুন — Forgot Password
+  static Future<Map<String, dynamic>> forgotPassword(String email) async {
+    final response = await http.post(
+      Uri.parse('${AppConstants.baseUrl}/auth/forgot-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return {'success': true, 'message': data['message']};
+    } else {
+      return {'success': false, 'message': data['message'] ?? 'Something went wrong'};
+    }
+  }
+
+  // ✅ নতুন — Reset Password
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String token,
+    required String newPassword,
+  }) async {
+    final response = await http.post(
+      Uri.parse('${AppConstants.baseUrl}/auth/reset-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'token': token, 'newPassword': newPassword}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return {'success': true, 'message': data['message']};
+    } else {
+      return {'success': false, 'message': data['message'] ?? 'Something went wrong'};
+    }
+  }
+
   // ─── User ────────────────────────────────────────────────────────
 
   static Future<User?> getUser() async {
