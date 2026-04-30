@@ -5,45 +5,14 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html show window;
 import '../utils/constants.dart';
 import '../models/travel_story.dart';
 import '../models/user.dart';
 
+import 'token_storage.dart'
+if (dart.library.html) 'token_storage_web.dart';
+
 class ApiService {
-  static const String _tokenKey = 'auth_token';
-
-  // ─── Token helpers ───────────────────────────────────────────────
-
-  static Future<void> saveToken(String token) async {
-    if (kIsWeb) {
-      html.window.localStorage[_tokenKey] = token;
-    } else {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_tokenKey, token);
-    }
-  }
-
-  static Future<String?> getToken() async {
-    if (kIsWeb) {
-      return html.window.localStorage[_tokenKey];
-    } else {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString(_tokenKey);
-    }
-  }
-
-  static Future<void> clearToken() async {
-    if (kIsWeb) {
-      html.window.localStorage.remove(_tokenKey);
-    } else {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_tokenKey);
-    }
-  }
-
   static Future<Map<String, String>> _headers() async {
     final token = await getToken();
     return {
@@ -102,7 +71,6 @@ class ApiService {
     await clearToken();
   }
 
-  // ✅ নতুন — Forgot Password
   static Future<Map<String, dynamic>> forgotPassword(String email) async {
     final response = await http.post(
       Uri.parse('${AppConstants.baseUrl}/auth/forgot-password'),
@@ -117,7 +85,6 @@ class ApiService {
     }
   }
 
-  // ✅ নতুন — Reset Password
   static Future<Map<String, dynamic>> resetPassword({
     required String email,
     required String token,

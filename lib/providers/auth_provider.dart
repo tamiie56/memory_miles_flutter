@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
+import '../services/token_storage.dart'
+if (dart.library.html) '../services/token_storage_web.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _user;
@@ -15,7 +17,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoggedIn => _user != null;
 
   Future<void> tryAutoLogin() async {
-    final token = await ApiService.getToken();
+    final token = await getToken();
     if (token != null) {
       final user = await ApiService.getUser();
       if (user != null) {

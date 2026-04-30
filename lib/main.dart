@@ -9,8 +9,6 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/reset_password_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'utils/theme.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html show window;
 
 void main() {
   runApp(const MemoryMilesApp());
@@ -45,8 +43,6 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   bool _checked = false;
-
-  // ✅ নতুন — URL থেকে reset token পড়া
   String? _resetToken;
   String? _resetEmail;
 
@@ -57,10 +53,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _checkAuth();
   }
 
-  // ✅ নতুন — email এর link এ token আর email আছে কিনা check করো
   void _readResetTokenFromUrl() {
     if (kIsWeb) {
-      final uri = Uri.parse(html.window.location.href);
+      // Web এ URL থেকে token পড়ার জন্য
+      final uri = Uri.base;
       final token = uri.queryParameters['token'];
       final email = uri.queryParameters['email'];
       if (token != null && email != null) {
@@ -77,8 +73,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ নতুন — reset link এ এলে সরাসরি ResetPasswordScreen দেখাও
-    if (_resetToken != null && _resetEmail != null) {
+    if (kIsWeb && _resetToken != null && _resetEmail != null) {
       return ResetPasswordScreen(
         email: _resetEmail!,
         token: _resetToken!,
