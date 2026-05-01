@@ -3,8 +3,9 @@
 A full-stack travel story journaling app built with Flutter (Android + Web) and a Node.js/Express backend deployed on Render.
 
 ## 🚀 Live Backend
-
+```
 https://memory-miles-backend.onrender.com/api
+```
 
 > ⚠️ Free tier on Render may cause a **~50 second cold start delay** on first request after inactivity.
 
@@ -15,6 +16,7 @@ Get the latest release from [Releases](https://github.com/tamiie56/memory_miles_
 
 ## 📁 Project Structure
 
+```
 memory_miles_flutter/
 ├── lib/                                    # Flutter frontend
 │   ├── main.dart                           # App entry point & auth wrapper
@@ -68,6 +70,8 @@ memory_miles_flutter/
 ├── test/
 │   └── widget_test.dart
 └── pubspec.yaml
+```
+
 ---
 
 ## ✨ Features
@@ -113,16 +117,21 @@ memory_miles_flutter/
 ## 🔌 API Endpoints
 
 ### Auth
+```
 POST   /api/auth/signup
 POST   /api/auth/signin
 POST   /api/auth/forgot-password
 POST   /api/auth/reset-password
+```
 
 ### User
+```
 POST   /api/user/signout
 GET    /api/user/getusers
+```
 
 ### Travel Stories
+```
 POST   /api/travelStory/add
 GET    /api/travelStory/get-all
 POST   /api/travelStory/edit-story/:id
@@ -132,6 +141,7 @@ GET    /api/travelStory/search?query=
 GET    /api/travelStory/filter?startDate=&endDate=
 POST   /api/travelStory/image-upload
 DELETE /api/travelStory/delete-image
+```
 
 ---
 
