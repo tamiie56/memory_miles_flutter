@@ -2,19 +2,17 @@
 
 A full-stack travel story journaling app built with Flutter (Android + Web) and a Node.js/Express backend deployed on Render.
 
-## 🚀 Live Backend
+## Live Backend
 ```
 https://memory-miles-backend.onrender.com/api
 ```
 
-> ⚠️ Free tier on Render may cause a **~50 second cold start delay** on first request after inactivity.
-
-## 📱 Download APK
+## Download APK
 Get the latest release from [Releases](https://github.com/tamiie56/memory_miles_flutter/releases).
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 memory_miles_flutter/
@@ -67,6 +65,8 @@ memory_miles_flutter/
 │   └── index.js                           # Express app entry point
 │
 ├── android/                               # Android config
+├── assets/
+│   └── logo.png                           # App launcher icon
 ├── test/
 │   └── widget_test.dart
 └── pubspec.yaml
@@ -74,32 +74,32 @@ memory_miles_flutter/
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature | Status |
 |---|---|
-| User Signup / Login / Logout | ✅ |
-| Auto-login (JWT token persistence) | ✅ |
-| Forgot Password (email reset link) | ✅ |
-| Reset Password | ✅ |
-| View all travel stories (staggered grid) | ✅ |
-| Add new travel story | ✅ |
-| Edit existing story | ✅ |
-| Delete story | ✅ |
-| Toggle favorite | ✅ |
-| Search stories by title/content | ✅ |
-| Filter stories by date range | ✅ |
-| Multiple image upload (Cloudinary) | ✅ |
-| Video upload (Cloudinary, max 30s recommended) | ✅ |
-| Location search (OpenStreetMap Nominatim) | ✅ |
-| Story detail view with swipeable media gallery | ✅ |
-| Video player in story view (Chewie) | ✅ |
-| Pull to refresh | ✅ |
-| Flutter Web support | ✅ |
+| User Signup / Login / Logout | Done |
+| Auto-login (JWT token persistence) | Done |
+| Forgot Password (email reset link) | Done |
+| Reset Password | Done |
+| View all travel stories (staggered grid) | Done |
+| Add new travel story | Done |
+| Edit existing story | Done |
+| Delete story | Done |
+| Toggle favorite | Done |
+| Search stories by title/content | Done |
+| Filter stories by date range | Done |
+| Multiple image upload (Cloudinary) | Done |
+| Video upload (Cloudinary, max 30s recommended) | Done |
+| Location search (OpenStreetMap Nominatim) | Done |
+| Story detail view with swipeable media gallery | Done |
+| Video player in story view (Chewie) | Done |
+| Pull to refresh | Done |
+| Flutter Web support | Done |
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -114,7 +114,7 @@ memory_miles_flutter/
 
 ---
 
-## 🔌 API Endpoints
+## API Endpoints
 
 ### Auth
 ```
@@ -145,7 +145,7 @@ DELETE /api/travelStory/delete-image
 
 ---
 
-## ⚙️ Setup Instructions
+## Setup Instructions
 
 ### Prerequisites
 - Flutter SDK
@@ -178,8 +178,7 @@ EMAIL_PASS=your_gmail_app_password
 CLIENT_URL=http://localhost:8080
 ```
 
-> 💡 `EMAIL_PASS` is a Gmail **App Password**, not your regular password.
-> Generate one: Google Account → Security → 2-Step Verification → App Passwords
+`EMAIL_PASS` is a Gmail App Password, not your regular password. Generate one at: Google Account > Security > 2-Step Verification > App Passwords.
 
 Start the backend:
 ```bash
@@ -216,11 +215,11 @@ flutter build apk --release
 # APK: build/app/outputs/flutter-apk/app-release.apk
 ```
 
-> 💡 `--web-port=8080` is required so the password reset email link works correctly with `CLIENT_URL`.
+`--web-port=8080` is required so the password reset email link works correctly with `CLIENT_URL`.
 
 ---
 
-## 📦 Dependencies
+## Dependencies
 
 ### Flutter
 | Package | Purpose |
@@ -237,6 +236,7 @@ flutter build apk --release
 | `flutter_staggered_grid_view` | Story grid layout |
 | `intl` | Date formatting |
 | `fluttertoast` | Toast notifications |
+| `flutter_launcher_icons` | Custom app launcher icon |
 | `cupertino_icons` | iOS-style icons |
 
 ### Backend
@@ -256,9 +256,10 @@ flutter build apk --release
 
 ---
 
-## 🔧 Notes
+## Notes
 
 - JWT token is stored in `SharedPreferences` on mobile and `localStorage` on web.
 - `verifyUser.js` supports both cookie and `Authorization: Bearer <token>` header.
 - Cloudinary `resource_type` is auto-detected — both images and videos are supported.
 - For password reset to work on Flutter Web, `CLIENT_URL` in `.env` must match the Flutter Web app URL (e.g. `http://localhost:8080`).
+- Server uptime is maintained via UptimeRobot monitoring.
