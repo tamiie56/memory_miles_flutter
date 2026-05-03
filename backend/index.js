@@ -31,8 +31,8 @@ app.use(
 app.use(cookieParser())
 app.use(express.json())
 
-app.listen(3000, () => {
-  console.log("Server is running on port 3000!")
+app.get("/", (req, res) => {
+    res.status(200).json({ status: "Memory Miles API is running!" })
 })
 
 app.use("/api/auth", authRoutes)
@@ -53,4 +53,8 @@ app.use((err, req, res, next) => {
         statusCode,
         message,
     })
+})
+
+app.listen(3000, () => {
+  console.log("Server is running on port 3000!")
 })
