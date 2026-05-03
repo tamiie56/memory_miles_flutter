@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../utils/constants.dart';
@@ -13,6 +14,25 @@ import 'token_storage.dart'
 if (dart.library.html) 'token_storage_web.dart';
 
 class ApiService {
+  // Dio instance with IPv4 forced
+  static Dio _dio() {
+    final dio = Dio(BaseOptions(
+      baseUrl: AppConstants.baseUrl,
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+    ));
+
+    if (!kIsWeb) {
+      (dio.httpClientAdapter as dynamic).onHttpClientCreate =
+          (HttpClient client) {
+        client.badCertificateCallback = (cert, host, port) => true;
+        return client;
+      };
+    }
+
+    return dio;
+  }
+
   static Future<Map<String, String>> _headers() async {
     final token = await getToken();
     return {
@@ -28,16 +48,14 @@ class ApiService {
     required String email,
     required String password,
   }) async {
-    final response = await http.post(
-      Uri.parse('${AppConstants.baseUrl}/auth/signup'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'username': username, 'email': email, 'password': password}),
-    );
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return {'success': true, 'message': data};
-    } else {
-      return {'success': false, 'message': data['message'] ?? 'Signup failed'};
+    try {
+      final response = await _dio().post(
+        '/auth/signup',
+        data: {'username': username, 'email': email, 'password': password},
+      );
+      return {'success': true, 'message': response.data};
+    } on DioException catch (e) {
+      return {'success': false, 'message': e.response?.data['message'] ?? 'Signup failed'};
     }
   }
 
@@ -45,43 +63,42 @@ class ApiService {
     required String email,
     required String password,
   }) async {
-    final response = await http.post(
-      Uri.parse('${AppConstants.baseUrl}/auth/signin'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) {
+    try {
+      final response = await _dio().post(
+        '/auth/signin',
+        data: {'email': email, 'password': password},
+      );
+      final data = response.data;
       final token = data['token'];
-      if (token != null) {
-        await saveToken(token);
-      }
+      if (token != null) await saveToken(token);
       return {'success': true, 'user': User.fromJson(data)};
-    } else {
-      return {'success': false, 'message': data['message'] ?? 'Signin failed'};
+    } on DioException catch (e) {
+      return {'success': false, 'message': e.response?.data['message'] ?? 'Signin failed'};
     }
   }
 
   static Future<void> signout() async {
-    final headers = await _headers();
-    await http.post(
-      Uri.parse('${AppConstants.baseUrl}/user/signout'),
-      headers: headers,
-    );
+    final token = await getToken();
+    try {
+      await _dio().post(
+        '/user/signout',
+        options: Options(headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        }),
+      );
+    } catch (_) {}
     await clearToken();
   }
 
   static Future<Map<String, dynamic>> forgotPassword(String email) async {
-    final response = await http.post(
-      Uri.parse('${AppConstants.baseUrl}/auth/forgot-password'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email}),
-    );
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) {
-      return {'success': true, 'message': data['message']};
-    } else {
-      return {'success': false, 'message': data['message'] ?? 'Something went wrong'};
+    try {
+      final response = await _dio().post(
+        '/auth/forgot-password',
+        data: {'email': email},
+      );
+      return {'success': true, 'message': response.data['message']};
+    } on DioException catch (e) {
+      return {'success': false, 'message': e.response?.data['message'] ?? 'Something went wrong'};
     }
   }
 
@@ -90,47 +107,50 @@ class ApiService {
     required String token,
     required String newPassword,
   }) async {
-    final response = await http.post(
-      Uri.parse('${AppConstants.baseUrl}/auth/reset-password'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'token': token, 'newPassword': newPassword}),
-    );
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) {
-      return {'success': true, 'message': data['message']};
-    } else {
-      return {'success': false, 'message': data['message'] ?? 'Something went wrong'};
+    try {
+      final response = await _dio().post(
+        '/auth/reset-password',
+        data: {'email': email, 'token': token, 'newPassword': newPassword},
+      );
+      return {'success': true, 'message': response.data['message']};
+    } on DioException catch (e) {
+      return {'success': false, 'message': e.response?.data['message'] ?? 'Something went wrong'};
     }
   }
 
   // ─── User ────────────────────────────────────────────────────────
 
   static Future<User?> getUser() async {
-    final headers = await _headers();
-    final response = await http.get(
-      Uri.parse('${AppConstants.baseUrl}/user/getusers'),
-      headers: headers,
-    );
-    if (response.statusCode == 200) {
-      return User.fromJson(jsonDecode(response.body));
+    final token = await getToken();
+    try {
+      final response = await _dio().get(
+        '/user/getusers',
+        options: Options(headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        }),
+      );
+      return User.fromJson(response.data);
+    } catch (_) {
+      return null;
     }
-    return null;
   }
 
   // ─── Travel Stories ──────────────────────────────────────────────
 
   static Future<List<TravelStory>> getAllStories() async {
-    final headers = await _headers();
-    final response = await http.get(
-      Uri.parse('${AppConstants.baseUrl}/travelStory/get-all'),
-      headers: headers,
-    );
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final List stories = data['stories'];
+    final token = await getToken();
+    try {
+      final response = await _dio().get(
+        '/travelStory/get-all',
+        options: Options(headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        }),
+      );
+      final List stories = response.data['stories'];
       return stories.map((s) => TravelStory.fromJson(s)).toList();
+    } catch (_) {
+      return [];
     }
-    return [];
   }
 
   static Future<Map<String, dynamic>> addStory({
@@ -140,23 +160,25 @@ class ApiService {
     required List<String> visitedLocation,
     required DateTime visitedDate,
   }) async {
-    final headers = await _headers();
-    final response = await http.post(
-      Uri.parse('${AppConstants.baseUrl}/travelStory/add'),
-      headers: headers,
-      body: jsonEncode({
-        'title': title,
-        'story': story,
-        'mediaUrls': mediaUrls,
-        'visitedLocation': visitedLocation,
-        'visitedDate': visitedDate.millisecondsSinceEpoch.toString(),
-      }),
-    );
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 201) {
-      return {'success': true, 'story': TravelStory.fromJson(data['story'])};
+    final token = await getToken();
+    try {
+      final response = await _dio().post(
+        '/travelStory/add',
+        data: {
+          'title': title,
+          'story': story,
+          'mediaUrls': mediaUrls,
+          'visitedLocation': visitedLocation,
+          'visitedDate': visitedDate.millisecondsSinceEpoch.toString(),
+        },
+        options: Options(headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        }),
+      );
+      return {'success': true, 'story': TravelStory.fromJson(response.data['story'])};
+    } on DioException catch (e) {
+      return {'success': false, 'message': e.response?.data['message'] ?? 'Failed to add story'};
     }
-    return {'success': false, 'message': data['message'] ?? 'Failed to add story'};
   }
 
   static Future<Map<String, dynamic>> editStory({
@@ -167,104 +189,121 @@ class ApiService {
     required List<String> visitedLocation,
     required DateTime visitedDate,
   }) async {
-    final headers = await _headers();
-    final response = await http.post(
-      Uri.parse('${AppConstants.baseUrl}/travelStory/edit-story/$id'),
-      headers: headers,
-      body: jsonEncode({
-        'title': title,
-        'story': story,
-        'mediaUrls': mediaUrls,
-        'visitedLocation': visitedLocation,
-        'visitedDate': visitedDate.millisecondsSinceEpoch.toString(),
-      }),
-    );
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) {
-      return {'success': true, 'story': TravelStory.fromJson(data['story'])};
+    final token = await getToken();
+    try {
+      final response = await _dio().post(
+        '/travelStory/edit-story/$id',
+        data: {
+          'title': title,
+          'story': story,
+          'mediaUrls': mediaUrls,
+          'visitedLocation': visitedLocation,
+          'visitedDate': visitedDate.millisecondsSinceEpoch.toString(),
+        },
+        options: Options(headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        }),
+      );
+      return {'success': true, 'story': TravelStory.fromJson(response.data['story'])};
+    } on DioException catch (e) {
+      return {'success': false, 'message': e.response?.data['message'] ?? 'Failed to update story'};
     }
-    return {'success': false, 'message': data['message'] ?? 'Failed to update story'};
   }
 
   static Future<bool> deleteStory(String id) async {
-    final headers = await _headers();
-    final response = await http.delete(
-      Uri.parse('${AppConstants.baseUrl}/travelStory/delete-story/$id'),
-      headers: headers,
-    );
-    return response.statusCode == 200;
+    final token = await getToken();
+    try {
+      await _dio().delete(
+        '/travelStory/delete-story/$id',
+        options: Options(headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        }),
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<bool> updateFavorite(String id, bool isFavorite) async {
-    final headers = await _headers();
-    final response = await http.put(
-      Uri.parse('${AppConstants.baseUrl}/travelStory/update-is-favorite/$id'),
-      headers: headers,
-      body: jsonEncode({'isFavorite': isFavorite}),
-    );
-    return response.statusCode == 200;
+    final token = await getToken();
+    try {
+      await _dio().put(
+        '/travelStory/update-is-favorite/$id',
+        data: {'isFavorite': isFavorite},
+        options: Options(headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        }),
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<List<TravelStory>> searchStories(String query) async {
-    final headers = await _headers();
-    final response = await http.get(
-      Uri.parse('${AppConstants.baseUrl}/travelStory/search?query=${Uri.encodeComponent(query)}'),
-      headers: headers,
-    );
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final List stories = data['stories'];
+    final token = await getToken();
+    try {
+      final response = await _dio().get(
+        '/travelStory/search',
+        queryParameters: {'query': query},
+        options: Options(headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        }),
+      );
+      final List stories = response.data['stories'];
       return stories.map((s) => TravelStory.fromJson(s)).toList();
+    } catch (_) {
+      return [];
     }
-    return [];
   }
 
   // ─── Media Upload ─────────────────────────────────────────────────
 
   static Future<List<String>> uploadMediaFiles(List<File> files) async {
     final token = await getToken();
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('${AppConstants.baseUrl}/travelStory/image-upload'),
-    );
-    if (token != null) {
-      request.headers['Authorization'] = 'Bearer $token';
-    }
+    final formData = FormData();
     for (final file in files) {
-      request.files.add(await http.MultipartFile.fromPath('images', file.path));
+      formData.files.add(MapEntry(
+        'images',
+        await MultipartFile.fromFile(file.path),
+      ));
     }
-    final response = await request.send();
-    final respStr = await response.stream.bytesToString();
-    if (response.statusCode == 201) {
-      final data = jsonDecode(respStr);
-      return List<String>.from(data['mediaUrls']);
+    try {
+      final response = await _dio().post(
+        '/travelStory/image-upload',
+        data: formData,
+        options: Options(headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        }),
+      );
+      return List<String>.from(response.data['mediaUrls']);
+    } catch (_) {
+      return [];
     }
-    return [];
   }
 
   static Future<List<String>> uploadMediaBytesList(
       List<Uint8List> bytesList, List<String> filenames) async {
     final token = await getToken();
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('${AppConstants.baseUrl}/travelStory/image-upload'),
-    );
-    if (token != null) {
-      request.headers['Authorization'] = 'Bearer $token';
-    }
+    final formData = FormData();
     for (int i = 0; i < bytesList.length; i++) {
-      request.files.add(http.MultipartFile.fromBytes(
+      formData.files.add(MapEntry(
         'images',
-        bytesList[i],
-        filename: filenames[i],
+        MultipartFile.fromBytes(bytesList[i], filename: filenames[i]),
       ));
     }
-    final response = await request.send();
-    final respStr = await response.stream.bytesToString();
-    if (response.statusCode == 201) {
-      final data = jsonDecode(respStr);
-      return List<String>.from(data['mediaUrls']);
+    try {
+      final response = await _dio().post(
+        '/travelStory/image-upload',
+        data: formData,
+        options: Options(headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        }),
+      );
+      return List<String>.from(response.data['mediaUrls']);
+    } catch (_) {
+      return [];
     }
-    return [];
   }
 }
