@@ -1,22 +1,10 @@
-import nodemailer from "nodemailer"
-import dns from "dns"
+import { Resend } from "resend"
 
-// IPv4 force
-dns.setDefaultResultOrder("ipv4first")
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 const sendEmail = async ({ to, subject, html }) => {
-    const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false,
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        },
-    })
-
-    await transporter.sendMail({
-        from: `"Memory Miles" <${process.env.EMAIL_USER}>`,
+    await resend.emails.send({
+        from: "Memory Miles <onboarding@resend.dev>",
         to,
         subject,
         html,
