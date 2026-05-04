@@ -80,7 +80,11 @@ export const forgotPassword = async (req, res, next) => {
 
         const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}&email=${email}`
 
-        await sendEmail({
+        // Response আগে পাঠাও, email পরে পাঠাও
+        res.status(200).json({ message: "Reset email sent successfully" })
+
+        // Background এ email পাঠাও — timeout হলেও user এ error দেখাবে না
+        sendEmail({
             to: user.email,
             subject: "Memory Miles - Password Reset",
             html: `
@@ -97,9 +101,7 @@ export const forgotPassword = async (req, res, next) => {
                 ">Reset Password</a>
                 <p>If you did not request this, please ignore this email.</p>
             `,
-        })
-
-        res.status(200).json({ message: "Reset email sent successfully" })
+        }).catch(err => console.error("Email send error:", err))
 
     } catch (error) {
         next(error)

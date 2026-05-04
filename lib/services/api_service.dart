@@ -1,11 +1,9 @@
 // lib/services/api_service.dart
 
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import '../utils/constants.dart';
 import '../models/travel_story.dart';
 import '../models/user.dart';
@@ -14,12 +12,11 @@ import 'token_storage.dart'
 if (dart.library.html) 'token_storage_web.dart';
 
 class ApiService {
-  // Dio instance with IPv4 forced
   static Dio _dio() {
     final dio = Dio(BaseOptions(
       baseUrl: AppConstants.baseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
+      connectTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(seconds: 60),
     ));
 
     if (!kIsWeb) {
@@ -98,7 +95,12 @@ class ApiService {
       );
       return {'success': true, 'message': response.data['message']};
     } on DioException catch (e) {
-      return {'success': false, 'message': e.response?.data['message'] ?? 'Something went wrong'};
+      final message = e.response?.data?['message']
+          ?? e.message
+          ?? e.type.toString();
+      return {'success': false, 'message': message};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
     }
   }
 
@@ -114,7 +116,12 @@ class ApiService {
       );
       return {'success': true, 'message': response.data['message']};
     } on DioException catch (e) {
-      return {'success': false, 'message': e.response?.data['message'] ?? 'Something went wrong'};
+      final message = e.response?.data?['message']
+          ?? e.message
+          ?? e.type.toString();
+      return {'success': false, 'message': message};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
     }
   }
 
