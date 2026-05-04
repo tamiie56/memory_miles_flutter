@@ -58,6 +58,7 @@ export const signin = async (req, res, next) => {
     }
 }
 
+// Send OTP to user email for password reset
 export const forgotPassword = async (req, res, next) => {
     const { email } = req.body
 
@@ -72,33 +73,32 @@ export const forgotPassword = async (req, res, next) => {
             return next(errorHandler(404, "No account found with this email"))
         }
 
-        const token = crypto.randomBytes(32).toString("hex")
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString()
 
-        user.resetPasswordToken = token
-        user.resetPasswordExpires = Date.now() + 60 * 60 * 1000
+        user.otp = otp
+        user.otpExpires = Date.now() + 10 * 60 * 1000 // 10 minutes
         await user.save()
 
-        const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}&email=${email}`
+        // Send response first, then send email in background
+        res.status(200).json({ message: "OTP sent successfully" })
 
-        // Response আগে পাঠাও, email পরে পাঠাও
-        res.status(200).json({ message: "Reset email sent successfully" })
-
-        // Background এ email পাঠাও — timeout হলেও user এ error দেখাবে না
         sendEmail({
             to: user.email,
-            subject: "Memory Miles - Password Reset",
+            subject: "Memory Miles - Password Reset OTP",
             html: `
-                <h2>Password Reset Request</h2>
-                <p>Click the button below to reset your password. This link expires in <strong>1 hour</strong>.</p>
-                <a href="${resetUrl}" style="
-                    display:inline-block;
-                    padding:12px 24px;
-                    background:#4f46e5;
-                    color:#fff;
-                    border-radius:8px;
-                    text-decoration:none;
-                    font-weight:bold;
-                ">Reset Password</a>
+                <h2>Password Reset OTP</h2>
+                <p>Use the following OTP to reset your password. It expires in <strong>10 minutes</strong>.</p>
+                <h1 style="
+                    font-size: 48px;
+                    font-weight: bold;
+                    color: #4f46e5;
+                    letter-spacing: 8px;
+                    text-align: center;
+                    padding: 20px;
+                    background: #f3f4f6;
+                    border-radius: 8px;
+                ">${otp}</h1>
                 <p>If you did not request this, please ignore this email.</p>
             `,
         }).catch(err => console.error("Email send error:", err))
@@ -108,25 +108,54 @@ export const forgotPassword = async (req, res, next) => {
     }
 }
 
-export const resetPassword = async (req, res, next) => {
-    const { email, token, newPassword } = req.body
+// Verify OTP
+export const verifyOtp = async (req, res, next) => {
+    const { email, otp } = req.body
 
-    if (!email || !token || !newPassword) {
+    if (!email || !otp) {
         return next(errorHandler(400, "All fields are required"))
     }
 
     try {
         const user = await User.findOne({
             email,
-            resetPasswordToken: token,
-            resetPasswordExpires: { $gt: Date.now() },
+            otp,
+            otpExpires: { $gt: Date.now() },
         })
 
         if (!user) {
-            return next(errorHandler(400, "Token is invalid or has expired"))
+            return next(errorHandler(400, "Invalid or expired OTP"))
+        }
+
+        res.status(200).json({ message: "OTP verified successfully" })
+
+    } catch (error) {
+        next(error)
+    }
+}
+
+// Reset password after OTP verification
+export const resetPassword = async (req, res, next) => {
+    const { email, otp, newPassword } = req.body
+
+    if (!email || !otp || !newPassword) {
+        return next(errorHandler(400, "All fields are required"))
+    }
+
+    try {
+        const user = await User.findOne({
+            email,
+            otp,
+            otpExpires: { $gt: Date.now() },
+        })
+
+        if (!user) {
+            return next(errorHandler(400, "Invalid or expired OTP"))
         }
 
         user.password = bcryptjs.hashSync(newPassword, 10)
+        user.otp = undefined
+        user.otpExpires = undefined
         user.resetPasswordToken = undefined
         user.resetPasswordExpires = undefined
 

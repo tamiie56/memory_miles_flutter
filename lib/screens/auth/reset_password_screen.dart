@@ -6,12 +6,12 @@ import '../../utils/theme.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
-  final String token;
+  final String otp;
 
   const ResetPasswordScreen({
     super.key,
     required this.email,
-    required this.token,
+    required this.otp,
   });
 
   @override
@@ -50,7 +50,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
     final result = await ApiService.resetPassword(
       email: widget.email,
-      token: widget.token,
+      otp: widget.otp,
       newPassword: password,
     );
 

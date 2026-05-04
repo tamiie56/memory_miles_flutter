@@ -15,12 +15,17 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-
-    // ✅ নতুন দুইটা field যোগ হলো
     resetPasswordToken: {
         type: String,
     },
     resetPasswordExpires: {
+        type: Date,
+    },
+    // New OTP fields
+    otp: {
+        type: String,
+    },
+    otpExpires: {
         type: Date,
     },
 },

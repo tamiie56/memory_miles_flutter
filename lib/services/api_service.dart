@@ -87,6 +87,7 @@ class ApiService {
     await clearToken();
   }
 
+  // Send OTP to email
   static Future<Map<String, dynamic>> forgotPassword(String email) async {
     try {
       final response = await _dio().post(
@@ -104,15 +105,37 @@ class ApiService {
     }
   }
 
+  // Verify OTP
+  static Future<Map<String, dynamic>> verifyOtp({
+    required String email,
+    required String otp,
+  }) async {
+    try {
+      final response = await _dio().post(
+        '/auth/verify-otp',
+        data: {'email': email, 'otp': otp},
+      );
+      return {'success': true, 'message': response.data['message']};
+    } on DioException catch (e) {
+      final message = e.response?.data?['message']
+          ?? e.message
+          ?? e.type.toString();
+      return {'success': false, 'message': message};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // Reset password with OTP
   static Future<Map<String, dynamic>> resetPassword({
     required String email,
-    required String token,
+    required String otp,
     required String newPassword,
   }) async {
     try {
       final response = await _dio().post(
         '/auth/reset-password',
-        data: {'email': email, 'token': token, 'newPassword': newPassword},
+        data: {'email': email, 'otp': otp, 'newPassword': newPassword},
       );
       return {'success': true, 'message': response.data['message']};
     } on DioException catch (e) {
