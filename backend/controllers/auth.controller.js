@@ -58,7 +58,6 @@ export const signin = async (req, res, next) => {
     }
 }
 
-// Send OTP to user email for password reset
 export const forgotPassword = async (req, res, next) => {
     const { email } = req.body
 
@@ -73,42 +72,44 @@ export const forgotPassword = async (req, res, next) => {
             return next(errorHandler(404, "No account found with this email"))
         }
 
-        // Generate 6-digit OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString()
 
         user.otp = otp
-        user.otpExpires = Date.now() + 10 * 60 * 1000 // 10 minutes
+        user.otpExpires = Date.now() + 10 * 60 * 1000
         await user.save()
 
-        // Send response first, then send email in background
-        res.status(200).json({ message: "OTP sent successfully" })
-
-        sendEmail({
-            to: user.email,
-            subject: "Memory Miles - Password Reset OTP",
-            html: `
-                <h2>Password Reset OTP</h2>
-                <p>Use the following OTP to reset your password. It expires in <strong>10 minutes</strong>.</p>
-                <h1 style="
-                    font-size: 48px;
-                    font-weight: bold;
-                    color: #4f46e5;
-                    letter-spacing: 8px;
-                    text-align: center;
-                    padding: 20px;
-                    background: #f3f4f6;
-                    border-radius: 8px;
-                ">${otp}</h1>
-                <p>If you did not request this, please ignore this email.</p>
-            `,
-        }).catch(err => console.error("Email send error:", err))
+        // Send email first to catch errors
+        try {
+            await sendEmail({
+                to: user.email,
+                subject: "Memory Miles - Password Reset OTP",
+                html: `
+                    <h2>Password Reset OTP</h2>
+                    <p>Use the following OTP to reset your password. It expires in <strong>10 minutes</strong>.</p>
+                    <h1 style="
+                        font-size: 48px;
+                        font-weight: bold;
+                        color: #4f46e5;
+                        letter-spacing: 8px;
+                        text-align: center;
+                        padding: 20px;
+                        background: #f3f4f6;
+                        border-radius: 8px;
+                    ">${otp}</h1>
+                    <p>If you did not request this, please ignore this email.</p>
+                `,
+            })
+            res.status(200).json({ message: "OTP sent successfully" })
+        } catch (emailError) {
+            console.error("Email send error:", emailError.message)
+            return next(errorHandler(500, `Email failed: ${emailError.message}`))
+        }
 
     } catch (error) {
         next(error)
     }
 }
 
-// Verify OTP
 export const verifyOtp = async (req, res, next) => {
     const { email, otp } = req.body
 
@@ -134,7 +135,6 @@ export const verifyOtp = async (req, res, next) => {
     }
 }
 
-// Reset password after OTP verification
 export const resetPassword = async (req, res, next) => {
     const { email, otp, newPassword } = req.body
 
