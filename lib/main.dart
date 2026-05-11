@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/story_provider.dart';
+import 'providers/theme_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'utils/theme.dart';
@@ -21,12 +22,19 @@ class MemoryMilesApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => StoryProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: MaterialApp(
-        title: 'Memory Miles',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.theme,
-        home: const AuthWrapper(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          return MaterialApp(
+            title: 'Memory Miles',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode,
+            home: const AuthWrapper(),
+          );
+        },
       ),
     );
   }
@@ -57,7 +65,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     if (!_checked) {
       return const Scaffold(
-        backgroundColor: Color(0xFFECFEFF),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

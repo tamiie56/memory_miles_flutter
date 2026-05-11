@@ -73,4 +73,40 @@ class AuthProvider extends ChangeNotifier {
     _user = null;
     notifyListeners();
   }
+
+  Future<Map<String, dynamic>> updateUsername(String username) async {
+    if (username.isEmpty) return {'success': false, 'message': 'Username cannot be empty'};
+    final result = await ApiService.updateProfile(username: username);
+    if (result['success'] && result['user'] != null) {
+      _user = result['user'];
+      notifyListeners();
+    }
+    return result;
+  }
+
+  Future<Map<String, dynamic>> updateEmail(String email) async {
+    if (email.isEmpty || !email.contains('@')) {
+      return {'success': false, 'message': 'Invalid email address'};
+    }
+    final result = await ApiService.updateProfile(email: email);
+    if (result['success'] && result['user'] != null) {
+      _user = result['user'];
+      notifyListeners();
+    }
+    return result;
+  }
+
+  Future<Map<String, dynamic>> updatePassword(String oldPassword, String newPassword) async {
+    if (oldPassword.isEmpty || newPassword.isEmpty) {
+      return {'success': false, 'message': 'All fields are required'};
+    }
+    if (newPassword.length < 6) {
+      return {'success': false, 'message': 'Password must be at least 6 characters'};
+    }
+    final result = await ApiService.updatePassword(
+      oldPassword: oldPassword,
+      newPassword: newPassword,
+    );
+    return result;
+  }
 }

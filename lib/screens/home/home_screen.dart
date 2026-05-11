@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/story_provider.dart';
 import '../../utils/theme.dart';
 import '../../widgets/story_card.dart';
+import '../profile/profile_sidebar.dart';
 import '../story/add_edit_story_screen.dart';
 import '../story/view_story_screen.dart';
 
@@ -18,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _searchCtrl = TextEditingController();
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isSearching = false;
 
   @override
@@ -49,10 +51,6 @@ class _HomeScreenState extends State<HomeScreen> {
     context.read<StoryProvider>().fetchAllStories();
   }
 
-  Future<void> _signout() async {
-    await context.read<AuthProvider>().signout();
-  }
-
   @override
   Widget build(BuildContext context) {
     final stories = context.watch<StoryProvider>().stories;
@@ -60,10 +58,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = context.watch<AuthProvider>().user;
 
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: const ProfileSidebar(),
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         backgroundColor: AppTheme.white,
         elevation: 0,
+        automaticallyImplyLeading: false,
         title: Row(
           children: [
             const Icon(Icons.flight_takeoff, color: AppTheme.primary, size: 22),
@@ -80,40 +81,26 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           if (user != null)
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryLight,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 12,
-                    backgroundColor: AppTheme.primary,
-                    child: Text(
-                      user.username.isNotEmpty
-                          ? user.username[0].toUpperCase()
-                          : 'U',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold),
+            GestureDetector(
+              onTap: () => _scaffoldKey.currentState?.openDrawer(),
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                child: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: AppTheme.primary,
+                  child: Text(
+                    user.username.isNotEmpty
+                        ? user.username[0].toUpperCase()
+                        : 'U',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  Text(user.username,
-                      style: const TextStyle(
-                          fontSize: 13, color: AppTheme.textDark)),
-                ],
+                ),
               ),
             ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: AppTheme.textMid),
-            onPressed: _signout,
-            tooltip: 'Sign Out',
-          ),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
