@@ -56,13 +56,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final stories = context.watch<StoryProvider>().stories;
     final loading = context.watch<StoryProvider>().loading;
     final user = context.watch<AuthProvider>().user;
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       key: _scaffoldKey,
       drawer: const ProfileSidebar(),
-      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: AppTheme.white,
         elevation: 0,
         automaticallyImplyLeading: false,
         title: Row(
@@ -123,7 +123,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     : null,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 filled: true,
-                fillColor: AppTheme.background,
+                fillColor: isDark
+                    ? const Color(0xFF1E293B)
+                    : const Color(0xFFECFEFF),
               ),
             ),
           ),

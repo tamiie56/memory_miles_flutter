@@ -11,13 +11,23 @@ class StoryProvider extends ChangeNotifier {
   List<TravelStory> _stories = [];
   bool _loading = false;
 
+  // Stats tracking
+  int _totalCreated = 0;
+  int _totalDeleted = 0;
+  int _totalEdited = 0;
+
   List<TravelStory> get stories => _stories;
   bool get loading => _loading;
+  int get totalCreated => _totalCreated;
+  int get totalDeleted => _totalDeleted;
+  int get totalEdited => _totalEdited;
+  int get totalLiked => _stories.where((s) => s.isFavorite).length;
 
   Future<void> fetchAllStories() async {
     _loading = true;
     notifyListeners();
     _stories = await ApiService.getAllStories();
+    _totalCreated = _stories.length + _totalDeleted;
     _loading = false;
     notifyListeners();
   }
@@ -91,6 +101,7 @@ class StoryProvider extends ChangeNotifier {
     );
 
     if (result['success']) {
+      _totalEdited++;
       await fetchAllStories();
       return true;
     }
@@ -100,6 +111,7 @@ class StoryProvider extends ChangeNotifier {
   Future<bool> deleteStory(String id) async {
     final success = await ApiService.deleteStory(id);
     if (success) {
+      _totalDeleted++;
       _stories.removeWhere((s) => s.id == id);
       notifyListeners();
     }
