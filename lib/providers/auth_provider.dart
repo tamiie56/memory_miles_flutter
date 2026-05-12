@@ -1,5 +1,7 @@
 // lib/providers/auth_provider.dart
 
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
@@ -107,6 +109,23 @@ class AuthProvider extends ChangeNotifier {
       oldPassword: oldPassword,
       newPassword: newPassword,
     );
+    return result;
+  }
+
+  Future<Map<String, dynamic>> updateProfilePicture({
+    Uint8List? imageBytes,
+    String? filename,
+    File? imageFile,
+  }) async {
+    final result = await ApiService.updateProfilePicture(
+      imageBytes: imageBytes,
+      filename: filename,
+      imageFile: imageFile,
+    );
+    if (result['success'] && result['user'] != null) {
+      _user = result['user'];
+      notifyListeners();
+    }
     return result;
   }
 }

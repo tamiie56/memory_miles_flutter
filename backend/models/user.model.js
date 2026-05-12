@@ -21,12 +21,16 @@ const userSchema = new mongoose.Schema({
     resetPasswordExpires: {
         type: Date,
     },
-    // New OTP fields
     otp: {
         type: String,
     },
     otpExpires: {
         type: Date,
+    },
+    // Profile picture URL (stored in Cloudinary)
+    profilePicture: {
+        type: String,
+        default: '',
     },
 },
     { timestamps: true }

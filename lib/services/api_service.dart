@@ -178,6 +178,45 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> updateProfilePicture({
+    Uint8List? imageBytes,
+    String? filename,
+    File? imageFile,
+  }) async {
+    final token = await getToken();
+    final formData = FormData();
+
+    if (kIsWeb && imageBytes != null) {
+      formData.files.add(MapEntry(
+        'profilePicture',
+        MultipartFile.fromBytes(imageBytes, filename: filename ?? 'profile.jpg'),
+      ));
+    } else if (imageFile != null) {
+      formData.files.add(MapEntry(
+        'profilePicture',
+        await MultipartFile.fromFile(imageFile.path),
+      ));
+    } else {
+      return {'success': false, 'message': 'No image provided'};
+    }
+
+    try {
+      final response = await _dio().post(
+        '/user/update-profile-picture',
+        data: formData,
+        options: Options(headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        }),
+      );
+      return {'success': true, 'user': User.fromJson(response.data)};
+    } on DioException catch (e) {
+      final message = e.response?.data?['message'] ?? e.message ?? 'Upload failed';
+      return {'success': false, 'message': message};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   // ─── User ────────────────────────────────────────────────────────
 
   static Future<User?> getUser() async {
