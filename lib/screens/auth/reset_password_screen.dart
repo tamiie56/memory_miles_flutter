@@ -46,7 +46,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       return;
     }
 
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     final result = await ApiService.resetPassword(
       email: widget.email,
@@ -54,7 +57,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       newPassword: password,
     );
 
-    setState(() { _loading = false; });
+    setState(() {
+      _loading = false;
+    });
 
     if (result['success']) {
       setState(() => _success = true);
@@ -65,13 +70,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ FIX: Use Theme.of(context) for dark mode support
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyLarge?.color ?? AppTheme.textDark;
+    final subtitleColor = theme.textTheme.bodySmall?.color ?? AppTheme.textMid;
+
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: AppTheme.background,
+        // ✅ FIX: AppBar color from theme, not hardcoded
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTheme.textDark),
+          icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -82,18 +91,23 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           children: [
             const Icon(Icons.lock_outline, size: 56, color: AppTheme.primary),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Reset Password',
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.textDark,
+                // ✅ FIX: Dark-aware text color
+                color: textColor,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Enter your new password below.',
-              style: TextStyle(fontSize: 14, color: AppTheme.textMid),
+              style: TextStyle(
+                fontSize: 14,
+                // ✅ FIX: Dark-aware subtitle color
+                color: subtitleColor,
+              ),
             ),
             const SizedBox(height: 32),
 
@@ -125,7 +139,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               if (_error != null) ...[
                 const SizedBox(height: 8),
                 Text(_error!,
-                    style: const TextStyle(color: AppTheme.danger, fontSize: 12)),
+                    style: const TextStyle(
+                        color: AppTheme.danger, fontSize: 12)),
               ],
 
               const SizedBox(height: 24),
@@ -149,12 +164,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.green.shade200),
                 ),
-                child: const Column(
+                child: Column(
                   children: [
-                    Icon(Icons.check_circle_outline,
+                    const Icon(Icons.check_circle_outline,
                         color: Colors.green, size: 48),
-                    SizedBox(height: 12),
-                    Text(
+                    const SizedBox(height: 12),
+                    const Text(
                       'Password Reset Successful!',
                       style: TextStyle(
                         fontSize: 18,
@@ -162,11 +177,15 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         color: Colors.green,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
                       'Your password has been updated. You can now log in with your new password.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: AppTheme.textMid, fontSize: 13),
+                      style: TextStyle(
+                        // ✅ FIX: Dark-aware subtitle color
+                        color: subtitleColor,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),

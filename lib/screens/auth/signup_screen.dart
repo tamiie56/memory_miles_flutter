@@ -45,7 +45,10 @@ class _SignupScreenState extends State<SignupScreen> {
       setState(() => _error = 'Please enter your password.');
       return;
     }
-    setState(() { _error = null; _loading = true; });
+    setState(() {
+      _error = null;
+      _loading = true;
+    });
 
     final auth = context.read<AuthProvider>();
     final success = await auth.signup(name, email, password);
@@ -68,8 +71,13 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ FIX: Use Theme.of(context) for dark mode support
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = theme.textTheme.bodyLarge?.color ?? AppTheme.textDark;
+
     return Scaffold(
-      backgroundColor: AppTheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -91,7 +99,10 @@ class _SignupScreenState extends State<SignupScreen> {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, Colors.black.withOpacity(0.6)],
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.6)
+                      ],
                     ),
                   ),
                   padding: const EdgeInsets.all(24),
@@ -119,7 +130,8 @@ class _SignupScreenState extends State<SignupScreen> {
                 margin: const EdgeInsets.all(20),
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: AppTheme.white,
+                  // ✅ FIX: Dark-aware card color
+                  color: cardColor,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -132,12 +144,13 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Create Your Account',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.textDark,
+                        // ✅ FIX: Dark-aware text color
+                        color: textColor,
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -180,7 +193,8 @@ class _SignupScreenState extends State<SignupScreen> {
                     if (_error != null) ...[
                       const SizedBox(height: 8),
                       Text(_error!,
-                          style: const TextStyle(color: AppTheme.danger, fontSize: 12)),
+                          style: const TextStyle(
+                              color: AppTheme.danger, fontSize: 12)),
                     ],
 
                     const SizedBox(height: 24),
@@ -189,25 +203,31 @@ class _SignupScreenState extends State<SignupScreen> {
                       onPressed: _loading ? null : _handleSignup,
                       child: _loading
                           ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2),
-                            )
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2),
+                      )
                           : const Text('SIGN UP'),
                     ),
 
                     const SizedBox(height: 12),
 
-                    const Row(
+                    Row(
                       children: [
-                        Expanded(child: Divider()),
+                        const Expanded(child: Divider()),
                         Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('Or',
-                              style: TextStyle(color: AppTheme.textMid, fontSize: 12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'Or',
+                            // ✅ FIX: Dark-aware mid text
+                            style: TextStyle(
+                              color: theme.textTheme.bodySmall?.color,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
-                        Expanded(child: Divider()),
+                        const Expanded(child: Divider()),
                       ],
                     ),
 

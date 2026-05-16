@@ -69,16 +69,14 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
     super.dispose();
   }
 
-  // ─── Location Search (OpenStreetMap Nominatim) ───────────────────
+  // ─── Location Search ─────────────────────────────────────────────
 
   Future<void> _searchLocation(String query) async {
     if (query.trim().length < 2) {
       setState(() => _locationSuggestions = []);
       return;
     }
-
     setState(() => _searchingLocation = true);
-
     try {
       final response = await _dio.get(
         'https://nominatim.openstreetmap.org/search',
@@ -88,11 +86,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
           'limit': 5,
           'addressdetails': 1,
         },
-        options: Options(headers: {
-          'User-Agent': 'MemoryMilesApp/1.0',
-        }),
+        options: Options(headers: {'User-Agent': 'MemoryMilesApp/1.0'}),
       );
-
       final List results = response.data;
       setState(() {
         _locationSuggestions = results.map((r) {
@@ -104,21 +99,14 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
               '';
           final country = address['country'] ?? '';
           final displayName = r['display_name'] ?? '';
-
-          // Short name: City, Country
           String shortName = '';
           if (city.isNotEmpty && country.isNotEmpty) {
             shortName = '$city, $country';
           } else {
-            // fallback: first 2 parts of display_name
             final parts = displayName.split(', ');
             shortName = parts.take(2).join(', ');
           }
-
-          return {
-            'short': shortName,
-            'full': displayName,
-          };
+          return {'short': shortName, 'full': displayName};
         }).toList();
         _searchingLocation = false;
       });
@@ -300,7 +288,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
         visitedDate: _visitedDate,
         newMediaFiles: _newMediaFiles.isNotEmpty ? _newMediaFiles : null,
         newMediaBytesList: _newMediaBytes.isNotEmpty ? _newMediaBytes : null,
-        newMediaFilenames: _newMediaFilenames.isNotEmpty ? _newMediaFilenames : null,
+        newMediaFilenames:
+        _newMediaFilenames.isNotEmpty ? _newMediaFilenames : null,
       );
     } else {
       success = await provider.addStory(
@@ -310,7 +299,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
         visitedDate: _visitedDate,
         mediaFiles: _newMediaFiles.isNotEmpty ? _newMediaFiles : null,
         mediaBytesList: _newMediaBytes.isNotEmpty ? _newMediaBytes : null,
-        mediaFilenames: _newMediaFilenames.isNotEmpty ? _newMediaFilenames : null,
+        mediaFilenames:
+        _newMediaFilenames.isNotEmpty ? _newMediaFilenames : null,
       );
     }
 
@@ -344,11 +334,17 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ FIX: Dark-aware colors
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final storyBoxColor =
+    isDark ? const Color(0xFF1E293B) : Colors.grey.shade100;
+    final titleTextColor = isDark ? Colors.white : AppTheme.textDark;
+
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      // ✅ FIX: Remove hardcoded AppTheme.background — comes from theme
       appBar: AppBar(
+        // ✅ FIX: Remove hardcoded AppTheme.white — comes from theme
         title: Text(isEdit ? 'Update Story' : 'Add Story'),
-        backgroundColor: AppTheme.white,
         actions: [
           TextButton(
             onPressed: _loading ? null : _handleSubmit,
@@ -362,8 +358,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                 : Text(
               isEdit ? 'UPDATE' : 'ADD',
               style: const TextStyle(
-                  color: AppTheme.primary,
-                  fontWeight: FontWeight.bold),
+                  color: AppTheme.primary, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -393,10 +388,11 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
               const SizedBox(height: 8),
               TextField(
                 controller: _titleCtrl,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.textDark),
+                    // ✅ FIX: dark-aware title text
+                    color: titleTextColor),
                 decoration: const InputDecoration(
                   hintText: 'Once Upon A Time...',
                   border: InputBorder.none,
@@ -537,7 +533,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
               const SizedBox(height: 8),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  // ✅ FIX: dark-aware story box
+                  color: storyBoxColor,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: TextField(
@@ -555,11 +552,10 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Visited Locations with Search
+              // Visited Locations
               _label('VISITED LOCATIONS'),
               const SizedBox(height: 8),
 
-              // Search field
               Row(
                 children: [
                   Expanded(
@@ -567,8 +563,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                       controller: _locationSearchCtrl,
                       decoration: InputDecoration(
                         hintText: 'Search a location...',
-                        prefixIcon: const Icon(
-                            Icons.location_on_outlined),
+                        prefixIcon:
+                        const Icon(Icons.location_on_outlined),
                         suffixIcon: _searchingLocation
                             ? const Padding(
                           padding: EdgeInsets.all(12),
@@ -603,7 +599,10 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                 Container(
                   margin: const EdgeInsets.only(top: 4),
                   decoration: BoxDecoration(
-                    color: AppTheme.white,
+                    // ✅ FIX: dark-aware dropdown
+                    color: isDark
+                        ? const Color(0xFF1E293B)
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
@@ -617,8 +616,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _locationSuggestions.length,
-                    separatorBuilder: (_, __) =>
-                    const Divider(height: 1),
+                    separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final suggestion = _locationSuggestions[index];
                       return ListTile(
@@ -627,16 +625,14 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
                         title: Text(
                           suggestion['short'] ?? '',
                           style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500),
+                              fontSize: 14, fontWeight: FontWeight.w500),
                         ),
                         subtitle: Text(
                           suggestion['full'] ?? '',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontSize: 11,
-                              color: AppTheme.textMid),
+                              fontSize: 11, color: AppTheme.textMid),
                         ),
                         onTap: () => _addLocationFromSuggestion(
                             suggestion['short'] ?? ''),
@@ -647,7 +643,7 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
 
               const SizedBox(height: 12),
 
-              // Added location chips
+              // Location chips
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -679,8 +675,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
         return Container(
           color: Colors.black87,
           child: const Center(
-            child: Icon(Icons.play_circle_fill,
-                color: Colors.white, size: 36),
+            child:
+            Icon(Icons.play_circle_fill, color: Colors.white, size: 36),
           ),
         );
       }
@@ -696,8 +692,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
         return Container(
           color: Colors.black87,
           child: const Center(
-            child: Icon(Icons.play_circle_fill,
-                color: Colors.white, size: 36),
+            child:
+            Icon(Icons.play_circle_fill, color: Colors.white, size: 36),
           ),
         );
       }
@@ -710,8 +706,8 @@ class _AddEditStoryScreenState extends State<AddEditStoryScreen> {
         return Container(
           color: Colors.black87,
           child: const Center(
-            child: Icon(Icons.play_circle_fill,
-                color: Colors.white, size: 36),
+            child:
+            Icon(Icons.play_circle_fill, color: Colors.white, size: 36),
           ),
         );
       }

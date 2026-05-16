@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/story_provider.dart';
 import '../../utils/theme.dart';
@@ -56,7 +57,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final stories = context.watch<StoryProvider>().stories;
     final loading = context.watch<StoryProvider>().loading;
     final user = context.watch<AuthProvider>().user;
-    final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -65,11 +65,11 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: Row(
+        title: const Row(
           children: [
-            const Icon(Icons.flight_takeoff, color: AppTheme.primary, size: 22),
-            const SizedBox(width: 8),
-            const Text(
+            Icon(Icons.flight_takeoff, color: AppTheme.primary, size: 22),
+            SizedBox(width: 8),
+            Text(
               'Memory Miles',
               style: TextStyle(
                 color: AppTheme.primary,
@@ -88,7 +88,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: CircleAvatar(
                   radius: 16,
                   backgroundColor: AppTheme.primary,
-                  child: Text(
+                  // ✅ FIX: Show profile picture if available, else show initial
+                  backgroundImage: (user.profilePicture != null &&
+                      user.profilePicture!.isNotEmpty)
+                      ? CachedNetworkImageProvider(user.profilePicture!)
+                      : null,
+                  child: (user.profilePicture == null ||
+                      user.profilePicture!.isEmpty)
+                      ? Text(
                     user.username.isNotEmpty
                         ? user.username[0].toUpperCase()
                         : 'U',
@@ -97,7 +104,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
-                  ),
+                  )
+                      : null,
                 ),
               ),
             ),
@@ -161,6 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       builder: (_) =>
                           ViewStoryScreen(story: story)),
                 ),
+                // ✅ FIX: Correct method name and pass story object
                 onFavorite: () => context
                     .read<StoryProvider>()
                     .toggleFavorite(story),

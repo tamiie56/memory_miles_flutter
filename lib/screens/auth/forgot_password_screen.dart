@@ -31,11 +31,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       return;
     }
 
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     final result = await ApiService.forgotPassword(email);
 
-    setState(() { _loading = false; });
+    setState(() {
+      _loading = false;
+    });
 
     if (result['success']) {
       if (mounted) {
@@ -53,13 +58,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ FIX: Use Theme.of(context) for dark mode support
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyLarge?.color ?? AppTheme.textDark;
+    final subtitleColor = theme.textTheme.bodySmall?.color ?? AppTheme.textMid;
+
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: AppTheme.background,
+        // ✅ FIX: Remove hardcoded AppTheme.background — AppBar color comes from theme
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTheme.textDark),
+          // ✅ FIX: Icon color from theme
+          icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -70,18 +80,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           children: [
             const Icon(Icons.lock_reset, size: 56, color: AppTheme.primary),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Forgot Password?',
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.textDark,
+                // ✅ FIX: Dark-aware text color
+                color: textColor,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Enter your email address and we will send you a 6-digit OTP to reset your password.',
-              style: TextStyle(fontSize: 14, color: AppTheme.textMid),
+              style: TextStyle(
+                fontSize: 14,
+                // ✅ FIX: Dark-aware subtitle color
+                color: subtitleColor,
+              ),
             ),
             const SizedBox(height: 32),
 
@@ -97,7 +112,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             if (_error != null) ...[
               const SizedBox(height: 8),
               Text(_error!,
-                  style: const TextStyle(color: AppTheme.danger, fontSize: 12)),
+                  style:
+                  const TextStyle(color: AppTheme.danger, fontSize: 12)),
             ],
 
             const SizedBox(height: 24),

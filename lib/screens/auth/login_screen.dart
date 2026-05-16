@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/theme.dart';
 import 'signup_screen.dart';
-import 'forgot_password_screen.dart'; // ✅ নতুন import
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -52,9 +52,14 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    // ✅ FIX: Use Theme.of(context) instead of hardcoded AppTheme static colors
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = theme.textTheme.bodyLarge?.color ?? AppTheme.textDark;
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      // ✅ FIX: scaffoldBackgroundColor comes from theme automatically
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -76,7 +81,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, Colors.black.withOpacity(0.6)],
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.6)
+                      ],
                     ),
                   ),
                   padding: const EdgeInsets.all(24),
@@ -109,7 +117,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 margin: const EdgeInsets.all(20),
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: AppTheme.white,
+                  // ✅ FIX: Dark-aware card color
+                  color: cardColor,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -122,12 +131,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Login',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.textDark,
+                        // ✅ FIX: Dark-aware text color
+                        color: textColor,
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -160,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
 
-                    // ✅ নতুন — Forgot Password link
+                    // Forgot Password link
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
@@ -182,7 +192,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (_error != null) ...[
                       const SizedBox(height: 4),
                       Text(_error!,
-                          style: const TextStyle(color: AppTheme.danger, fontSize: 12)),
+                          style: const TextStyle(
+                              color: AppTheme.danger, fontSize: 12)),
                     ],
 
                     const SizedBox(height: 16),
@@ -203,15 +214,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 12),
 
                     // Divider
-                    const Row(
+                    Row(
                       children: [
-                        Expanded(child: Divider()),
+                        const Expanded(child: Divider()),
                         Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('Or',
-                              style: TextStyle(color: AppTheme.textMid, fontSize: 12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'Or',
+                            style: TextStyle(
+                              // ✅ FIX: Dark-aware mid text
+                              color: theme.textTheme.bodySmall?.color,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
-                        Expanded(child: Divider()),
+                        const Expanded(child: Divider()),
                       ],
                     ),
 

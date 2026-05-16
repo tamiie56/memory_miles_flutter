@@ -57,8 +57,7 @@ class _ViewStoryScreenState extends State<ViewStoryScreen> {
 
     if (_isVideo(url)) {
       _disposeVideo();
-      final controller =
-      VideoPlayerController.networkUrl(Uri.parse(url));
+      final controller = VideoPlayerController.networkUrl(Uri.parse(url));
       await controller.initialize();
       final chewie = ChewieController(
         videoPlayerController: controller,
@@ -81,14 +80,21 @@ class _ViewStoryScreenState extends State<ViewStoryScreen> {
   Widget build(BuildContext context) {
     final media = widget.story.mediaUrls;
 
+    // ✅ FIX: Dark-aware colors
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final titleColor = isDark ? Colors.white : AppTheme.textDark;
+    final subtitleColor = isDark ? Colors.grey.shade400 : AppTheme.textMid;
+    final bodyTextColor = isDark ? Colors.grey.shade200 : AppTheme.textDark;
+
     return Scaffold(
-      backgroundColor: AppTheme.white,
+      backgroundColor: bgColor,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
-            backgroundColor: AppTheme.white,
+            backgroundColor: bgColor,
             leading: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
@@ -97,8 +103,7 @@ class _ViewStoryScreenState extends State<ViewStoryScreen> {
                   color: Colors.white.withOpacity(0.85),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.arrow_back,
-                    color: AppTheme.textDark),
+                child: const Icon(Icons.arrow_back, color: AppTheme.textDark),
               ),
             ),
             actions: [
@@ -111,8 +116,8 @@ class _ViewStoryScreenState extends State<ViewStoryScreen> {
                 ),
                 child: Container(
                   margin: const EdgeInsets.all(8),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.85),
                     borderRadius: BorderRadius.circular(20),
@@ -123,8 +128,8 @@ class _ViewStoryScreenState extends State<ViewStoryScreen> {
                           size: 16, color: AppTheme.primary),
                       SizedBox(width: 4),
                       Text('Edit',
-                          style: TextStyle(
-                              color: AppTheme.primary, fontSize: 13)),
+                          style:
+                          TextStyle(color: AppTheme.primary, fontSize: 13)),
                     ],
                   ),
                 ),
@@ -132,10 +137,10 @@ class _ViewStoryScreenState extends State<ViewStoryScreen> {
               GestureDetector(
                 onTap: () => _confirmDelete(context),
                 child: Container(
-                  margin: const EdgeInsets.only(
-                      right: 8, top: 8, bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6),
+                  margin:
+                  const EdgeInsets.only(right: 8, top: 8, bottom: 8),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.85),
                     borderRadius: BorderRadius.circular(20),
@@ -146,8 +151,8 @@ class _ViewStoryScreenState extends State<ViewStoryScreen> {
                           size: 16, color: AppTheme.danger),
                       SizedBox(width: 4),
                       Text('Delete',
-                          style: TextStyle(
-                              color: AppTheme.danger, fontSize: 13)),
+                          style:
+                          TextStyle(color: AppTheme.danger, fontSize: 13)),
                     ],
                   ),
                 ),
@@ -181,8 +186,7 @@ class _ViewStoryScreenState extends State<ViewStoryScreen> {
                               (i) => Container(
                             width: i == _currentMediaIndex ? 16 : 8,
                             height: 8,
-                            margin:
-                            const EdgeInsets.symmetric(horizontal: 3),
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
                             decoration: BoxDecoration(
                               color: i == _currentMediaIndex
                                   ? AppTheme.primary
@@ -194,12 +198,13 @@ class _ViewStoryScreenState extends State<ViewStoryScreen> {
                       ),
                     ),
 
+                  // ✅ FIX: dark-aware title
                   Text(
                     widget.story.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.textDark,
+                      color: titleColor,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -207,11 +212,11 @@ class _ViewStoryScreenState extends State<ViewStoryScreen> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
+                      // ✅ FIX: dark-aware date
                       Text(
                         DateFormat('dd MMM yyyy')
                             .format(widget.story.visitedDate),
-                        style: const TextStyle(
-                            fontSize: 13, color: AppTheme.textMid),
+                        style: TextStyle(fontSize: 13, color: subtitleColor),
                       ),
                       const Spacer(),
                       if (widget.story.visitedLocation.isNotEmpty)
@@ -231,8 +236,7 @@ class _ViewStoryScreenState extends State<ViewStoryScreen> {
                               Text(
                                 widget.story.visitedLocation.join(', '),
                                 style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.primary),
+                                    fontSize: 12, color: AppTheme.primary),
                               ),
                             ],
                           ),
@@ -243,11 +247,12 @@ class _ViewStoryScreenState extends State<ViewStoryScreen> {
                   const Divider(),
                   const SizedBox(height: 16),
 
+                  // ✅ FIX: dark-aware story body text
                   Text(
                     widget.story.story,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
-                      color: AppTheme.textDark,
+                      color: bodyTextColor,
                       height: 1.7,
                     ),
                     textAlign: TextAlign.justify,
@@ -272,8 +277,7 @@ class _ViewStoryScreenState extends State<ViewStoryScreen> {
       itemBuilder: (context, index) {
         final url = media[index];
         if (_isVideo(url)) {
-          if (index == _currentMediaIndex &&
-              _chewieController != null) {
+          if (index == _currentMediaIndex && _chewieController != null) {
             return Chewie(controller: _chewieController!);
           }
           return Container(
@@ -299,8 +303,7 @@ class _ViewStoryScreenState extends State<ViewStoryScreen> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Delete Story'),
-        content:
-        const Text('Are you sure you want to delete this story?'),
+        content: const Text('Are you sure you want to delete this story?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -308,8 +311,7 @@ class _ViewStoryScreenState extends State<ViewStoryScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style:
-            TextButton.styleFrom(foregroundColor: AppTheme.danger),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
             child: const Text('Delete'),
           ),
         ],

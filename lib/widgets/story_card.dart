@@ -28,15 +28,21 @@ class StoryCard extends StatelessWidget {
     final hasVideo = story.videoOnlyUrls.isNotEmpty;
     final totalMedia = story.mediaUrls.length;
 
+    // ✅ FIX: Dark-aware colors
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final titleColor = isDark ? Colors.white : AppTheme.textDark;
+    final subtitleColor = isDark ? Colors.grey.shade400 : AppTheme.textMid;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.white,
+          color: cardColor,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.07),
+              color: Colors.black.withOpacity(isDark ? 0.3 : 0.07),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -107,8 +113,7 @@ class StoryCard extends StatelessWidget {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.videocam,
-                              color: Colors.white, size: 12),
+                          Icon(Icons.videocam, color: Colors.white, size: 12),
                           SizedBox(width: 4),
                           Text('Video',
                               style: TextStyle(
@@ -134,9 +139,8 @@ class StoryCard extends StatelessWidget {
                         story.isFavorite
                             ? Icons.favorite
                             : Icons.favorite_border,
-                        color: story.isFavorite
-                            ? Colors.red
-                            : AppTheme.textMid,
+                        color:
+                        story.isFavorite ? Colors.red : AppTheme.textMid,
                         size: 18,
                       ),
                     ),
@@ -145,7 +149,7 @@ class StoryCard extends StatelessWidget {
               ],
             ),
 
-            // Content
+            // Content — ✅ FIX: dark-aware text colors
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -155,27 +159,24 @@ class StoryCard extends StatelessWidget {
                     story.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
-                      color: AppTheme.textDark,
+                      color: titleColor,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     DateFormat('dd MMM yyyy').format(story.visitedDate),
-                    style: const TextStyle(
-                        fontSize: 11, color: AppTheme.textMid),
+                    style: TextStyle(fontSize: 11, color: subtitleColor),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     story.story,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textMid,
-                        height: 1.4),
+                    style: TextStyle(
+                        fontSize: 12, color: subtitleColor, height: 1.4),
                   ),
                   const SizedBox(height: 8),
                   if (story.visitedLocation.isNotEmpty)
@@ -194,8 +195,7 @@ class StoryCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.location_on,
-                                size: 11,
-                                color: AppTheme.primary),
+                                size: 11, color: AppTheme.primary),
                             const SizedBox(width: 2),
                             Text(loc,
                                 style: const TextStyle(
@@ -226,8 +226,8 @@ class StoryCard extends StatelessWidget {
     height: 140,
     color: Colors.black87,
     child: const Center(
-      child: Icon(Icons.play_circle_fill,
-          color: Colors.white, size: 50),
+      child:
+      Icon(Icons.play_circle_fill, color: Colors.white, size: 50),
     ),
   );
 }

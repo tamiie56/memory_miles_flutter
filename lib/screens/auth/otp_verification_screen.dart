@@ -33,14 +33,19 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       return;
     }
 
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     final result = await ApiService.verifyOtp(
       email: widget.email,
       otp: otp,
     );
 
-    setState(() { _loading = false; });
+    setState(() {
+      _loading = false;
+    });
 
     if (result['success']) {
       if (mounted) {
@@ -60,9 +65,14 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   Future<void> _resendOtp() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     final result = await ApiService.forgotPassword(widget.email);
-    setState(() { _loading = false; });
+    setState(() {
+      _loading = false;
+    });
     if (result['success']) {
       setState(() => _error = 'OTP resent successfully.');
     } else {
@@ -72,13 +82,17 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ FIX: Use Theme.of(context) for dark mode support
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyLarge?.color ?? AppTheme.textDark;
+    final subtitleColor = theme.textTheme.bodySmall?.color ?? AppTheme.textMid;
+
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: AppTheme.background,
+        // ✅ FIX: AppBar color from theme, not hardcoded
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppTheme.textDark),
+          icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -87,20 +101,26 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.mark_email_read_outlined, size: 56, color: AppTheme.primary),
+            const Icon(Icons.mark_email_read_outlined,
+                size: 56, color: AppTheme.primary),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Enter OTP',
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.textDark,
+                // ✅ FIX: Dark-aware text color
+                color: textColor,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'A 6-digit OTP has been sent to ${widget.email}. It expires in 10 minutes.',
-              style: const TextStyle(fontSize: 14, color: AppTheme.textMid),
+              style: TextStyle(
+                fontSize: 14,
+                // ✅ FIX: Dark-aware subtitle color
+                color: subtitleColor,
+              ),
             ),
             const SizedBox(height: 32),
 
